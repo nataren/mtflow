@@ -38,7 +38,7 @@ func main() {
 	}
 
 	// Build the HTTP request
-	streamURL := fmt.Sprintf("https://%v@stream.flowdock.com/flows/%v/%v", accessToken, organization, flow)
+	streamURL := fmt.Sprintf("https://%s@stream.flowdock.com/flows/%s/%s?user=1", accessToken, organization, flow)
 	log.Printf("Will stream from organization '%s' flow '%s'", organization, flow)
 	request, err := http.NewRequest("GET", streamURL, nil)
 	if err != nil {
