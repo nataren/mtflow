@@ -1,13 +1,13 @@
 package main
 
 import (
-	"log"
-	"os"
 	"flag"
 	"fmt"
 	"github.com/bernerdschaefer/eventsource"
-	"time"
+	"log"
 	"net/http"
+	"os"
+	"time"
 )
 
 const (
@@ -40,16 +40,16 @@ func main() {
 	// Build the HTTP request
 	streamURL := fmt.Sprintf("https://%v@stream.flowdock.com/flows/%v/%v", accessToken, organization, flow)
 	log.Printf("Will stream from organization '%s' flow '%s'", organization, flow)
-    request, err := http.NewRequest("GET", streamURL, nil)
+	request, err := http.NewRequest("GET", streamURL, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	request.Header = map[string][]string {
-        "Content-Type": {"text/event-stream"},
-    }
+	request.Header = map[string][]string{
+		"Content-Type": {"text/event-stream"},
+	}
 
 	// Build the event source
-	source := eventsource.New(request, 3 * time.Second)
+	source := eventsource.New(request, 3*time.Second)
 	for {
 		event, err := source.Read()
 		if err != nil {
