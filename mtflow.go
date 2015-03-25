@@ -56,6 +56,6 @@ func main() {
 			log.Println(err)
 			time.Sleep(5 * time.Second)
 		}
-		log.Printf("%s. %s %s\n", event.ID, event.Type, event.Data)
+		log.Printf("event.ID '%s', event.Type '%s', event.Data '%s'\n", event.ID, event.Type, event.Data)
 	}
 }
