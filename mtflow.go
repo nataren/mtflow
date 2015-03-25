@@ -28,20 +28,23 @@ func main() {
 
 	// Validation
 	if accessToken == "" {
-		log.Fatalf("%s environment variable not found", FLOWDOCK_API_TOKEN)
+		log.Fatalf("'%s' environment variable not found", FLOWDOCK_API_TOKEN)
 	}
 	if organization == "" {
 		log.Fatal("'organization' is a required parameter")
 	}
+	if flow == "" {
+		log.Fatal("'flow' is a required parameter")
+	}
 
 	// Build the HTTP request
 	streamURL := fmt.Sprintf("https://%v@stream.flowdock.com/flows/%v/%v", accessToken, organization, flow)
+	log.Printf("Will stream from organization '%s' flow '%s'", organization, flow)
     request, err := http.NewRequest("GET", streamURL, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 	request.Header = map[string][]string {
-        "Accept": {"text/event-stream"},
         "Content-Type": {"text/event-stream"},
     }
 
