@@ -14,8 +14,27 @@ const (
 	FLOWDOCK_API_TOKEN = "FLOWDOCK_API_TOKEN"
 )
 
-func main() {
+type FlowdockMessage struct {
+	App         string          `json:"app,omitempty"`
+	Attachments []string        `json:"attachments"`
+	Content     FlowdockContent `json:"content"`
+	CreatedAt   string          `json:"created_at"` // TODO: Date?
+	Event       string          `json:"event"`
+	Flow        string          `json:"flow"`
+	Id          uint32          `json:"id"`
+	Persist     bool            `json:"persist"`
+	Sent        uint64          `json:"sent"`
+	Tags        []string        `json:"tags"`
+	User        string          `json:"user"`
+	Uuid        string          `json:"uuid,omitempty"`
+}
 
+type FlowdockContent struct {
+	Message       uint32 `json:"message"`
+	UpdateContent string `json:"updated_content"`
+}
+
+func main() {
 	// Environment variables definitions
 	accessToken := os.Getenv(FLOWDOCK_API_TOKEN)
 
