@@ -18,7 +18,7 @@ type FlowdockMessage struct {
 	App         string          `json:"app,omitempty"`
 	Attachments []string        `json:"attachments"`
 	Content     FlowdockContent `json:"content"`
-	CreatedAt   string          `json:"created_at"` // TODO: Date?
+	CreatedAt   time.Time       `json:"created_at"`
 	Event       string          `json:"event"`
 	Flow        string          `json:"flow"`
 	Id          uint32          `json:"id"`
@@ -35,6 +35,7 @@ type FlowdockContent struct {
 }
 
 func main() {
+
 	// Environment variables definitions
 	accessToken := os.Getenv(FLOWDOCK_API_TOKEN)
 
