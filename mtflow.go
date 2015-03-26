@@ -1,12 +1,14 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/bernerdschaefer/eventsource"
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -15,23 +17,50 @@ const (
 )
 
 type FlowdockMessage struct {
-	App         string          `json:"app,omitempty"`
-	Attachments []string        `json:"attachments"`
-	Content     FlowdockContent `json:"content"`
-	CreatedAt   time.Time       `json:"created_at"`
-	Event       string          `json:"event"`
-	Flow        string          `json:"flow"`
-	Id          uint32          `json:"id"`
-	Persist     bool            `json:"persist"`
-	Sent        uint64          `json:"sent"`
-	Tags        []string        `json:"tags"`
-	User        string          `json:"user"`
-	Uuid        string          `json:"uuid,omitempty"`
+	App         string    `json:"app,omitempty"`
+	Attachments []string  `json:"attachments"`
+	Content     string    `json:"content"`
+	CreatedAt   time.Time `json:"created_at"`
+	Event       string    `json:"event"`
+	Flow        string    `json:"flow"`
+	Id          uint32    `json:"id"`
+	Persist     bool      `json:"persist"`
+	Sent        uint64    `json:"sent"`
+	Tags        []string  `json:"tags"`
+	User        string    `json:"user"`
+	Uuid        string    `json:"uuid,omitempty"`
 }
 
-type FlowdockContent struct {
-	Message       uint32 `json:"message"`
-	UpdateContent string `json:"updated_content"`
+func execute(user string, msg FlowdockMessage) {
+	message := msg.Content
+	prefix := "@" + user
+	if !strings.HasPrefix(message, prefix) {
+		return
+	}
+	parts := strings.Split(message, " ")
+	if len(parts) < 3 {
+		log.Println("Incorrect cmd format: %s", message)
+		return
+	}
+	cmd := parts[1]
+	modifier := parts[2]
+	switch cmd {
+	case "start":
+		switch modifier {
+		case "pr":
+			go func() {
+				log.Println("Will start processing of pull requests")
+			}()
+		}
+
+	case "stop":
+		switch modifier {
+		case "pr":
+			go func() {
+				log.Println("Will stop processing of pull requests")
+			}()
+		}
+	}
 }
 
 func main() {
@@ -44,6 +73,8 @@ func main() {
 	flag.StringVar(&organization, "organization", "", "The organization name")
 	var flow string
 	flag.StringVar(&flow, "flow", "", "The flow to stream from")
+	var user string
+	flag.StringVar(&user, "user", "", "The name of the user which commands are being directed to")
 	flag.Parse()
 
 	// Validation
@@ -55,6 +86,9 @@ func main() {
 	}
 	if flow == "" {
 		log.Fatal("'flow' is a required parameter")
+	}
+	if user == "" {
+		log.Fatal("'user' is a required parameter")
 	}
 
 	// Build the HTTP request
@@ -75,7 +109,16 @@ func main() {
 		if err != nil {
 			log.Println(err)
 			time.Sleep(5 * time.Second)
+			continue
 		}
-		log.Printf("event.ID '%s', event.Type '%s', event.Data '%s'\n", event.ID, event.Type, event.Data)
+		log.Printf("eventType '%s', data '%s'", event.Type, event.Data)
+
+		// Interpret the commands
+		var msg FlowdockMessage
+		unmarshalErr := json.Unmarshal(event.Data, &msg)
+		if unmarshalErr != nil {
+			continue
+		}
+		execute(user, msg)
 	}
 }
