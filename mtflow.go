@@ -55,13 +55,13 @@ func execute(user string, msg FlowdockMessage, client *http.Client, prsURL *url.
 			go func() {
 				log.Println("I will start processing of pull requests")
 				startService := &http.Request{}
-				startService.Method = "PUT"
+				startService.Method = "POST"
 				q := prsURL.Query()
 				q.Set("apikey", prsApiKey)
 				startService.URL = &url.URL{
 					Host:     prsURL.Host,
 					Scheme:   prsURL.Scheme,
-					Opaque:   "/pr/@config",
+					Opaque:   "/host/services",
 					RawQuery: q.Encode(),
 				}
 				startService.Header = map[string][]string{
