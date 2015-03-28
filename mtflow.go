@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/bernerdschaefer/eventsource"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -33,7 +35,7 @@ type FlowdockMessage struct {
 	Uuid        string    `json:"uuid,omitempty"`
 }
 
-func execute(user string, msg FlowdockMessage, client *http.Client, prsURL *url.URL, prsApiKey string) {
+func execute(user string, msg FlowdockMessage, client *http.Client, prsURL *url.URL, prsApiKey string, prsConfig []byte) {
 	message := strings.ToLower(msg.Content)
 	prefix := "@" + user
 	if !strings.HasPrefix(message, strings.ToLower(prefix)) {
@@ -52,6 +54,31 @@ func execute(user string, msg FlowdockMessage, client *http.Client, prsURL *url.
 		case "pr":
 			go func() {
 				log.Println("I will start processing of pull requests")
+				startService := &http.Request{}
+				startService.Method = "PUT"
+				q := prsURL.Query()
+				q.Set("apikey", prsApiKey)
+				startService.URL = &url.URL{
+					Host:     prsURL.Host,
+					Scheme:   prsURL.Scheme,
+					Opaque:   "/pr/@config",
+					RawQuery: q.Encode(),
+				}
+				startService.Header = map[string][]string{
+					"Content-Type": {"application/xml"},
+				}
+				startService.Body = ioutil.NopCloser(bytes.NewReader(prsConfig))
+				startService.ContentLength = int64(len(prsConfig))
+				resp, err := client.Do(startService)
+				if err != nil {
+					log.Fatal(err)
+				}
+				statusCode := resp.StatusCode
+				if statusCode >= 200 && statusCode < 300 {
+					log.Println("Successfully started processing pull requests")
+				} else {
+					log.Printf("Failed to start processing pull requests: %v\n", resp.Status)
+				}
 			}()
 		}
 
@@ -96,14 +123,16 @@ func main() {
 	flag.StringVar(&user, "user", "", "The name of the user which commands are being directed to")
 	var prsURL string
 	flag.StringVar(&prsURL, "prsurl", "", "The URL where we can talk to the PullRequestService")
+	var prsConfigFile string
+	flag.StringVar(&prsConfigFile, "prsconfigfile", "", "Path to the configuration file for PullRequestService")
 	flag.Parse()
 
 	// Validation
 	if accessToken == "" {
-		log.Fatalf("'%s' environment variable not found", FLOWDOCK_API_TOKEN)
+		log.Fatalf("The '%s' environment variable is required", FLOWDOCK_API_TOKEN)
 	}
 	if prsApiKey == "" {
-		log.Fatal("The environment variable 'PRS_API_KEY' is required to be set")
+		log.Fatalf("The '%s' environment variable is required", PRS_API_KEY)
 	}
 	if organization == "" {
 		log.Fatal("'organization' is a required parameter")
@@ -115,7 +144,14 @@ func main() {
 		log.Fatal("'user' is a required parameter")
 	}
 	if prsURL == "" {
-		log.Fatal("The 'pullrequestservice' URL is required")
+		log.Fatal("'prsurl' is a required parameter")
+	}
+	if prsConfigFile == "" {
+		log.Fatal("'prsconfigfile' is a required parameter")
+	}
+	prsConfig, err := ioutil.ReadFile(prsConfigFile)
+	if err != nil {
+		log.Fatal(err)
 	}
 	prsParsedURL, err := url.Parse(prsURL)
 	if err != nil {
@@ -124,7 +160,7 @@ func main() {
 
 	// Build the HTTP request
 	streamURL := fmt.Sprintf("https://%s@stream.flowdock.com/flows/%s/%s?user=1", accessToken, organization, flow)
-	log.Printf("I will stream from organization '%s', flow '%s', user '%s', prsURL '%s'", organization, flow, user, prsURL)
+	log.Printf("I will stream from: organization='%s' flow='%s' user='%s' prsURL='%s' prsconfigfile='%s'", organization, flow, user, prsURL, prsConfigFile)
 	request, err := http.NewRequest("GET", streamURL, nil)
 	if err != nil {
 		log.Fatal(err)
@@ -152,6 +188,6 @@ func main() {
 		if unmarshalErr != nil {
 			continue
 		}
-		execute(user, msg, client, prsParsedURL, prsApiKey)
+		execute(user, msg, client, prsParsedURL, prsApiKey, prsConfig)
 	}
 }
