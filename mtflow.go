@@ -35,7 +35,14 @@ type FlowdockMessage struct {
 	Uuid        string    `json:"uuid,omitempty"`
 }
 
-func execute(user string, msg FlowdockMessage, client *http.Client, prsURL *url.URL, prsApiKey string, prsConfig []byte) {
+func executeCommand(user string, msg FlowdockMessage, client *http.Client, prsURL *url.URL, prsApiKey string, prsConfig []byte) {
+
+	// Catch the panicking go routine
+	defer func() {
+		if err := recover(); err != nil {
+			log.Printf("An error ocurred: %s", err)
+		}
+	}()
 	message := strings.ToLower(msg.Content)
 	prefix := "@" + user
 	if !strings.HasPrefix(message, strings.ToLower(prefix)) {
@@ -52,58 +59,54 @@ func execute(user string, msg FlowdockMessage, client *http.Client, prsURL *url.
 	case "start":
 		switch modifier {
 		case "pr":
-			go func() {
-				log.Println("I will start processing of pull requests")
-				startService := &http.Request{}
-				startService.Method = "POST"
-				q := prsURL.Query()
-				q.Set("apikey", prsApiKey)
-				startService.URL = &url.URL{
-					Host:     prsURL.Host,
-					Scheme:   prsURL.Scheme,
-					Opaque:   "/host/services",
-					RawQuery: q.Encode(),
-				}
-				startService.Header = map[string][]string{
-					"Content-Type": {"application/xml"},
-				}
-				startService.Body = ioutil.NopCloser(bytes.NewReader(prsConfig))
-				startService.ContentLength = int64(len(prsConfig))
-				resp, err := client.Do(startService)
-				if err != nil {
-					log.Fatal(err)
-				}
-				statusCode := resp.StatusCode
-				if statusCode >= 200 && statusCode < 300 {
-					log.Println("Successfully started processing pull requests")
-				} else {
-					log.Printf("Failed to start processing pull requests: %v\n", resp.Status)
-				}
-			}()
+			log.Println("I will start processing of pull requests")
+			startService := &http.Request{}
+			startService.Method = "POST"
+			q := prsURL.Query()
+			q.Set("apikey", prsApiKey)
+			startService.URL = &url.URL{
+				Host:     prsURL.Host,
+				Scheme:   prsURL.Scheme,
+				Opaque:   "/host/services",
+				RawQuery: q.Encode(),
+			}
+			startService.Header = map[string][]string{
+				"Content-Type": {"application/xml"},
+			}
+			startService.Body = ioutil.NopCloser(bytes.NewReader(prsConfig))
+			startService.ContentLength = int64(len(prsConfig))
+			resp, err := client.Do(startService)
+			if err != nil {
+				log.Panic(err)
+			}
+			statusCode := resp.StatusCode
+			if statusCode >= 200 && statusCode < 300 {
+				log.Println("Successfully started processing pull requests")
+			} else {
+				log.Printf("Failed to start processing pull requests: %v\n", resp.Status)
+			}
 		}
 
 	case "stop":
 		switch modifier {
 		case "pr":
-			go func() {
-				log.Println("I will handle 'stop pr' command")
-				stopService := &http.Request{}
-				stopService.Method = "DELETE"
-				q := prsURL.Query()
-				q.Set("apikey", prsApiKey)
-				prsURL.RawQuery = q.Encode()
-				stopService.URL = prsURL
-				resp, err := client.Do(stopService)
-				if err != nil {
-					log.Fatal(err)
-				}
-				statusCode := resp.StatusCode
-				if statusCode >= 200 && statusCode < 300 {
-					log.Println("Successfully stopped processing pull requests")
-				} else {
-					log.Printf("Failed to stop processing pull requests: %v\n", resp.Status)
-				}
-			}()
+			log.Println("I will handle 'stop pr' command")
+			stopService := &http.Request{}
+			stopService.Method = "DELETE"
+			q := prsURL.Query()
+			q.Set("apikey", prsApiKey)
+			prsURL.RawQuery = q.Encode()
+			stopService.URL = prsURL
+			resp, err := client.Do(stopService)
+			if err != nil {
+				log.Panic(err)
+			}
+			statusCode := resp.StatusCode
+			if statusCode >= 200 && statusCode < 300 {
+				log.Println("Successfully stopped processing pull requests")
+			} else {
+				log.Printf("Failed to stop processing pull requests: %v\n", resp.Status)
+			}
 		}
 	}
 }
@@ -188,6 +191,6 @@ func main() {
 		if unmarshalErr != nil {
 			continue
 		}
-		execute(user, msg, client, prsParsedURL, prsApiKey, prsConfig)
+		go executeCommand(user, msg, client, prsParsedURL, prsApiKey, prsConfig)
 	}
 }
