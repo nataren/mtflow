@@ -161,14 +161,14 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Build the HTTP request
+	// Build the HTTP request to flowdock
 	streamURL := fmt.Sprintf("https://%s@stream.flowdock.com/flows/%s/%s?user=1", accessToken, organization, flow)
 	log.Printf("I will stream from: organization='%s' flow='%s' user='%s' prsURL='%s' prsconfigfile='%s'", organization, flow, user, prsURL, prsConfigFile)
-	request, err := http.NewRequest("GET", streamURL, nil)
+	flowdock, err := http.NewRequest("GET", streamURL, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	request.Header = map[string][]string{
+	flowdock.Header = map[string][]string{
 		"Content-Type": {"text/event-stream"},
 	}
 
@@ -177,7 +177,7 @@ func main() {
 	client.Timeout = 5 * time.Second
 
 	// Build the event source
-	source := eventsource.New(request, 3*time.Second)
+	source := eventsource.New(flowdock, 3*time.Second)
 	for {
 		event, err := source.Read()
 		if err != nil {
