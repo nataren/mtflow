@@ -79,6 +79,7 @@ func executeCommand(user string, msg FlowdockMessage, client *http.Client, prsUR
 			if err != nil {
 				log.Panic(err)
 			}
+			defer resp.Body.Close()
 			statusCode := resp.StatusCode
 			if statusCode >= 200 && statusCode < 300 {
 				log.Println("Successfully started processing pull requests")
@@ -101,6 +102,7 @@ func executeCommand(user string, msg FlowdockMessage, client *http.Client, prsUR
 			if err != nil {
 				log.Panic(err)
 			}
+			defer resp.Body.Close()
 			statusCode := resp.StatusCode
 			if statusCode >= 200 && statusCode < 300 {
 				log.Println("Successfully stopped processing pull requests")
