@@ -175,8 +175,9 @@ func main() {
 	}
 
 	// The shared http client
-	client := &http.Client{}
-	client.Timeout = 5 * time.Second
+	client := &http.Client{
+		Timeout: time.Duration(5 * time.Second),
+	}
 
 	// Build the event source
 	source := eventsource.New(flowdock, 3*time.Second)
