@@ -35,7 +35,18 @@ type FlowdockMessage struct {
 	Uuid        string    `json:"uuid,omitempty"`
 }
 
-func executeCommand(user string, msg FlowdockMessage, client *http.Client, prsURL *url.URL, prsApiKey string, prsConfig []byte) {
+func release(coordinator chan bool) {
+	coordinator <- true
+}
+
+func executeCommand(
+	user string,
+	msg FlowdockMessage,
+	client *http.Client,
+	prsURL *url.URL,
+	prsApiKey string,
+	prsConfig []byte,
+	coordinator chan bool) {
 
 	// Catch the panicking go routine
 	defer func() {
@@ -46,11 +57,13 @@ func executeCommand(user string, msg FlowdockMessage, client *http.Client, prsUR
 	message := strings.ToLower(msg.Content)
 	prefix := "@" + user
 	if !strings.HasPrefix(message, strings.ToLower(prefix)) {
+		release(coordinator)
 		return
 	}
 	parts := strings.Split(message, " ")
 	if len(parts) < 3 {
 		log.Println("Incorrect cmd format: %s", message)
+		release(coordinator)
 		return
 	}
 	cmd := parts[1]
@@ -59,6 +72,7 @@ func executeCommand(user string, msg FlowdockMessage, client *http.Client, prsUR
 	case "start":
 		switch modifier {
 		case "pr":
+			<-coordinator
 			log.Println("I will start processing of pull requests")
 			startService := &http.Request{}
 			startService.Method = "POST"
@@ -80,6 +94,7 @@ func executeCommand(user string, msg FlowdockMessage, client *http.Client, prsUR
 				log.Panic(err)
 			}
 			defer resp.Body.Close()
+			defer func() { release(coordinator) }()
 			statusCode := resp.StatusCode
 			if statusCode >= 200 && statusCode < 300 {
 				log.Println("Successfully started processing pull requests")
@@ -91,6 +106,7 @@ func executeCommand(user string, msg FlowdockMessage, client *http.Client, prsUR
 	case "stop":
 		switch modifier {
 		case "pr":
+			<-coordinator
 			log.Println("I will handle 'stop pr' command")
 			stopService := &http.Request{}
 			stopService.Method = "DELETE"
@@ -103,6 +119,7 @@ func executeCommand(user string, msg FlowdockMessage, client *http.Client, prsUR
 				log.Panic(err)
 			}
 			defer resp.Body.Close()
+			defer func() { release(coordinator) }()
 			statusCode := resp.StatusCode
 			if statusCode >= 200 && statusCode < 300 {
 				log.Println("Successfully stopped processing pull requests")
@@ -178,6 +195,10 @@ func main() {
 	client := &http.Client{
 		Timeout: time.Duration(5 * time.Second),
 	}
+	coordinator := make(chan bool)
+	go func() {
+		coordinator <- true
+	}()
 
 	// Build the event source
 	source := eventsource.New(flowdock, 3*time.Second)
@@ -194,6 +215,6 @@ func main() {
 		if unmarshalErr != nil {
 			continue
 		}
-		go executeCommand(user, msg, client, prsParsedURL, prsApiKey, prsConfig)
+		go executeCommand(user, msg, client, prsParsedURL, prsApiKey, prsConfig, coordinator)
 	}
 }
