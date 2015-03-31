@@ -193,9 +193,7 @@ func main() {
 		Timeout: time.Duration(5 * time.Second),
 	}
 	coordinator := make(chan bool)
-	go func() {
-		coordinator <- true
-	}()
+	go release(coordinator)
 
 	// Build the event source
 	source := eventsource.New(flowdock, 3*time.Second)
