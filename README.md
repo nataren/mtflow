@@ -1,6 +1,8 @@
 mtflow
 ======
 
+[![Build Status](https://travis-ci.org/nataren/mtflow.svg)](https://travis-ci.org/nataren/mtflow)
+
 ## Overview
 
 `mtflow` is a bot that listen for commands from the Flowdock chat service.
