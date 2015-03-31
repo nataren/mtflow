@@ -53,17 +53,16 @@ func executeCommand(
 		if err := recover(); err != nil {
 			log.Printf("An error ocurred: %s", err)
 		}
+		release(coordinator)
 	}()
 	message := strings.ToLower(msg.Content)
 	prefix := "@" + user
 	if !strings.HasPrefix(message, strings.ToLower(prefix)) {
-		release(coordinator)
 		return
 	}
 	parts := strings.Split(message, " ")
 	if len(parts) < 3 {
 		log.Println("Incorrect cmd format: %s", message)
-		release(coordinator)
 		return
 	}
 	cmd := parts[1]
@@ -94,7 +93,6 @@ func executeCommand(
 				log.Panic(err)
 			}
 			defer resp.Body.Close()
-			defer func() { release(coordinator) }()
 			statusCode := resp.StatusCode
 			if statusCode >= 200 && statusCode < 300 {
 				log.Println("Successfully started processing pull requests")
@@ -119,7 +117,6 @@ func executeCommand(
 				log.Panic(err)
 			}
 			defer resp.Body.Close()
-			defer func() { release(coordinator) }()
 			statusCode := resp.StatusCode
 			if statusCode >= 200 && statusCode < 300 {
 				log.Println("Successfully stopped processing pull requests")
