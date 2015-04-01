@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/bernerdschaefer/eventsource"
+	"github.com/wm/go-flowdock/flowdock"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -39,7 +40,21 @@ func release(coordinator chan bool) {
 	coordinator <- true
 }
 
+func writeMessage(flowId string, client *flowdock.Client) func(msg string) {
+	return func(msg string) {
+		_, _, err := client.Messages.Create(&flowdock.MessagesCreateOptions{
+			FlowID:  flowId,
+			Content: msg,
+			Event:   "message",
+		})
+		if err != nil {
+			log.Println(err)
+		}
+	}
+}
+
 func executeCommand(
+	write func(msg string),
 	user string,
 	msg FlowdockMessage,
 	client *http.Client,
@@ -95,9 +110,12 @@ func executeCommand(
 			defer resp.Body.Close()
 			statusCode := resp.StatusCode
 			if statusCode >= 200 && statusCode < 300 {
-				log.Println("Successfully started processing pull requests")
+				msg := "Successfully started processing pull requests"
+				log.Println(msg)
+				write(msg)
 			} else {
-				log.Printf("Failed to start processing pull requests: %v\n", resp.Status)
+				msg := "Failed to start processing pull requests: " + resp.Status
+				write(msg)
 			}
 		}
 
@@ -119,9 +137,13 @@ func executeCommand(
 			defer resp.Body.Close()
 			statusCode := resp.StatusCode
 			if statusCode >= 200 && statusCode < 300 {
-				log.Println("Successfully stopped processing pull requests")
+				msg := "Successfully stopped processing pull requests"
+				log.Println(msg)
+				write(msg)
 			} else {
-				log.Printf("Failed to stop processing pull requests: %v\n", resp.Status)
+				msg := "Failed to stop processing pull requests: " + resp.Status
+				log.Println(msg)
+				write(msg)
 			}
 		}
 	}
@@ -177,7 +199,30 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Build the HTTP request to flowdock
+	// Setup the Flowdock REST client
+	flowRestClient := flowdock.NewClientWithToken(&http.Client{}, accessToken)
+	flows, _, flowsErr := flowRestClient.Flows.List(true, &flowdock.FlowsListOptions{User: false})
+	if flowsErr != nil {
+		log.Println(flowsErr)
+	}
+
+	// Figure out the flowId from the requested flow
+	flowId := ""
+	for _, f := range flows {
+		if strings.ToLower(*f.Name) == strings.ToLower(flow) {
+			flowId = *f.Id
+			break
+		}
+	}
+	if flowId == "" {
+		log.Fatalf("Could not find the flow '%s' which you requested to listen from", flow)
+	}
+
+	// Say hello to the flow
+	write := writeMessage(flowId, flowRestClient)
+	write("Hello, I am ready to accept commands")
+
+	// Build the streaming HTTP request to flowdock
 	streamURL := fmt.Sprintf("https://%s@stream.flowdock.com/flows/%s/%s?user=1", accessToken, organization, flow)
 	log.Printf("I will stream from: organization='%s' flow='%s' user='%s' prsURL='%s' prsconfigfile='%s'", organization, flow, user, prsURL, prsConfigFile)
 	flowdock, err := http.NewRequest("GET", streamURL, nil)
@@ -210,6 +255,6 @@ func main() {
 		if unmarshalErr != nil {
 			continue
 		}
-		go executeCommand(user, msg, client, prsParsedURL, prsApiKey, prsConfig, coordinator)
+		go executeCommand(write, user, msg, client, prsParsedURL, prsApiKey, prsConfig, coordinator)
 	}
 }
