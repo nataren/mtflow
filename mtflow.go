@@ -19,7 +19,7 @@ const (
 	PRS_API_KEY        = "PRS_API_KEY"
 )
 
-func release(coordinator chan bool) {
+func release(coordinator chan<- bool) {
 	coordinator <- true
 }
 
@@ -204,7 +204,7 @@ func main() {
 		}
 	}
 	if flowId == "" {
-		log.Fatalf("Could not find the flow '%s' which you requested to listen from", flow)
+		log.Fatalf("Could not find the flow '%s' which you requested to listen from", *flow)
 	}
 
 	// Say hello to the flow
@@ -212,7 +212,7 @@ func main() {
 	write("Hello, I am ready to accept commands")
 
 	// Build the streaming HTTP request to flowdock
-	log.Printf("I will stream from: organization='%s' flow='%s' user='%s' prsURL='%s' prsconfigfile='%s'", organization, flow, user, prsURL, prsConfigFile)
+	log.Printf("I will stream from: organization='%s' flow='%s' user='%s' prsURL='%s' prsconfigfile='%s'", *organization, *flow, *user, *prsURL, *prsConfigFile)
 
 	coordinator := make(chan bool)
 	go release(coordinator)
@@ -227,6 +227,9 @@ func main() {
 	}
 	for {
 		message := <-messages
+		if message.RawContent == nil {
+			continue
+		}
 		go executeCommand(write, *user, *message.RawContent, httpClient, prsParsedURL, prsApiKey, prsConfig, coordinator)
 	}
 }
