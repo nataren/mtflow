@@ -140,23 +140,21 @@ func executeCommand(
 	}
 }
 
-func main() {
+var (
 
 	// Environment variables definitions
-	accessToken := os.Getenv(FLOWDOCK_API_TOKEN)
-	prsApiKey := os.Getenv(PRS_API_KEY)
+	accessToken = os.Getenv(FLOWDOCK_API_TOKEN)
+	prsApiKey   = os.Getenv(PRS_API_KEY)
 
 	// Command-line arguments definition
-	var organization string
-	flag.StringVar(&organization, "organization", "", "The organization name")
-	var flow string
-	flag.StringVar(&flow, "flow", "", "The flow to stream from")
-	var user string
-	flag.StringVar(&user, "user", "", "The name of the user which commands are being directed to")
-	var prsURL string
-	flag.StringVar(&prsURL, "prsurl", "", "The URL where we can talk to the PullRequestService")
-	var prsConfigFile string
-	flag.StringVar(&prsConfigFile, "prsconfigfile", "", "Path to the configuration file for PullRequestService")
+	organization  = flag.String("organization", "", "The organization name")
+	flow          = flag.String("flow", "", "The flow to stream from")
+	user          = flag.String("user", "", "The name of the user which commands are being directed to")
+	prsURL        = flag.String("prsurl", "", "The URL where we can talk to the PullRequestService")
+	prsConfigFile = flag.String("prsconfigfile", "", "Path to the configuration file for PullRequestService")
+)
+
+func main() {
 	flag.Parse()
 
 	// Validation
@@ -166,26 +164,26 @@ func main() {
 	if prsApiKey == "" {
 		log.Fatalf("The '%s' environment variable is required", PRS_API_KEY)
 	}
-	if organization == "" {
+	if *organization == "" {
 		log.Fatal("'organization' is a required parameter")
 	}
-	if flow == "" {
+	if *flow == "" {
 		log.Fatal("'flow' is a required parameter")
 	}
-	if user == "" {
+	if *user == "" {
 		log.Fatal("'user' is a required parameter")
 	}
-	if prsURL == "" {
+	if *prsURL == "" {
 		log.Fatal("'prsurl' is a required parameter")
 	}
-	if prsConfigFile == "" {
+	if *prsConfigFile == "" {
 		log.Fatal("'prsconfigfile' is a required parameter")
 	}
-	prsConfig, err := ioutil.ReadFile(prsConfigFile)
+	prsConfig, err := ioutil.ReadFile(*prsConfigFile)
 	if err != nil {
 		log.Fatal(err)
 	}
-	prsParsedURL, err := url.Parse(prsURL)
+	prsParsedURL, err := url.Parse(*prsURL)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -200,7 +198,7 @@ func main() {
 	// Figure out the flowId from the requested flow
 	flowId := ""
 	for _, f := range flows {
-		if strings.ToLower(*f.Name) == strings.ToLower(flow) {
+		if strings.ToLower(*f.Name) == strings.ToLower(*flow) {
 			flowId = *f.Id
 			break
 		}
@@ -220,7 +218,7 @@ func main() {
 	go release(coordinator)
 
 	// Build the event source
-	messages, _, err := flowdockClient.Messages.Stream(accessToken, organization, flow)
+	messages, _, err := flowdockClient.Messages.Stream(accessToken, *organization, *flow)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -229,6 +227,6 @@ func main() {
 	}
 	for {
 		message := <-messages
-		go executeCommand(write, user, *message.RawContent, httpClient, prsParsedURL, prsApiKey, prsConfig, coordinator)
+		go executeCommand(write, *user, *message.RawContent, httpClient, prsParsedURL, prsApiKey, prsConfig, coordinator)
 	}
 }
