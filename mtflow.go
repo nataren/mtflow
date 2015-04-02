@@ -245,7 +245,7 @@ func main() {
 	for {
 		event, err := source.Read()
 		if err != nil {
-			log.Println("Error parsing unsupported Flowdock event")
+			log.Println(err)
 			continue
 		}
 
@@ -253,6 +253,7 @@ func main() {
 		var msg FlowdockMessage
 		unmarshalErr := json.Unmarshal(event.Data, &msg)
 		if unmarshalErr != nil {
+			log.Println(fmt.Sprintf("%s: %s", unmarshalErr, event.Data))
 			continue
 		}
 		go executeCommand(write, user, msg, client, prsParsedURL, prsApiKey, prsConfig, coordinator)
