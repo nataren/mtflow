@@ -226,6 +226,7 @@ func main() {
 		Timeout: time.Duration(5 * time.Second),
 	}
 	for {
+		time.Sleep(1 * time.Second)
 		message := <-messages
 		if message.RawContent == nil {
 			continue
