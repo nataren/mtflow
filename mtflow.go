@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"flag"
-	"fmt"
-	"github.com/bernerdschaefer/eventsource"
 	"github.com/wm/go-flowdock/flowdock"
 	"io/ioutil"
 	"log"
@@ -20,21 +18,6 @@ const (
 	FLOWDOCK_API_TOKEN = "FLOWDOCK_API_TOKEN"
 	PRS_API_KEY        = "PRS_API_KEY"
 )
-
-type FlowdockMessage struct {
-	App         string    `json:"app,omitempty"`
-	Attachments []string  `json:"attachments"`
-	Content     string    `json:"content"`
-	CreatedAt   time.Time `json:"created_at"`
-	Event       string    `json:"event"`
-	Flow        string    `json:"flow"`
-	Id          uint32    `json:"id"`
-	Persist     bool      `json:"persist"`
-	Sent        uint64    `json:"sent"`
-	Tags        []string  `json:"tags"`
-	User        string    `json:"user"`
-	Uuid        string    `json:"uuid,omitempty"`
-}
 
 func release(coordinator chan bool) {
 	coordinator <- true
@@ -56,7 +39,7 @@ func writeMessage(flowId string, client *flowdock.Client) func(msg string) {
 func executeCommand(
 	write func(msg string),
 	user string,
-	msg FlowdockMessage,
+	msg json.RawMessage,
 	client *http.Client,
 	prsURL *url.URL,
 	prsApiKey string,
@@ -70,14 +53,16 @@ func executeCommand(
 		}
 		release(coordinator)
 	}()
-	message := strings.ToLower(msg.Content)
+	command := strings.Trim(strings.ToLower(string(msg[:])), "\"")
+	log.Printf("The received command: %s", command)
 	prefix := "@" + user
-	if !strings.HasPrefix(message, strings.ToLower(prefix)) {
+	if !strings.HasPrefix(command, strings.ToLower(prefix)) {
+		log.Printf("The command '%s' does not have the prefix '%s', will skip it\n", command, prefix)
 		return
 	}
-	parts := strings.Split(message, " ")
+	parts := strings.Split(command, " ")
 	if len(parts) < 3 {
-		log.Println("Incorrect cmd format: %s", message)
+		log.Printf("The command '%s' has the incorrect command format", command)
 		return
 	}
 	cmd := parts[1]
@@ -117,6 +102,8 @@ func executeCommand(
 				msg := "Failed to start processing pull requests: " + resp.Status
 				write(msg)
 			}
+		default:
+			log.Printf("The modifier '%s' is not handled\n", modifier)
 		}
 
 	case "stop":
@@ -145,7 +132,11 @@ func executeCommand(
 				log.Println(msg)
 				write(msg)
 			}
+		default:
+			log.Println("The modifier '%s' is not handled", modifier)
 		}
+	default:
+		log.Println("The command '%s' is not handled", cmd)
 	}
 }
 
@@ -200,8 +191,8 @@ func main() {
 	}
 
 	// Setup the Flowdock REST client
-	flowRestClient := flowdock.NewClientWithToken(&http.Client{}, accessToken)
-	flows, _, flowsErr := flowRestClient.Flows.List(true, &flowdock.FlowsListOptions{User: false})
+	flowdockClient := flowdock.NewClientWithToken(&http.Client{}, accessToken)
+	flows, _, flowsErr := flowdockClient.Flows.List(true, &flowdock.FlowsListOptions{User: false})
 	if flowsErr != nil {
 		log.Println(flowsErr)
 	}
@@ -219,43 +210,25 @@ func main() {
 	}
 
 	// Say hello to the flow
-	write := writeMessage(flowId, flowRestClient)
+	write := writeMessage(flowId, flowdockClient)
 	write("Hello, I am ready to accept commands")
 
 	// Build the streaming HTTP request to flowdock
-	streamURL := fmt.Sprintf("https://%s@stream.flowdock.com/flows/%s/%s?user=1", accessToken, organization, flow)
 	log.Printf("I will stream from: organization='%s' flow='%s' user='%s' prsURL='%s' prsconfigfile='%s'", organization, flow, user, prsURL, prsConfigFile)
-	flowdock, err := http.NewRequest("GET", streamURL, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	flowdock.Header = map[string][]string{
-		"Content-Type": {"text/event-stream"},
-	}
 
-	// The shared http client
-	client := &http.Client{
-		Timeout: time.Duration(5 * time.Second),
-	}
 	coordinator := make(chan bool)
 	go release(coordinator)
 
 	// Build the event source
-	source := eventsource.New(flowdock, 3*time.Second)
+	messages, _, err := flowdockClient.Messages.Stream(accessToken, organization, flow)
+	if err != nil {
+		log.Fatal(err)
+	}
+	httpClient := &http.Client{
+		Timeout: time.Duration(5 * time.Second),
+	}
 	for {
-		event, err := source.Read()
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-
-		// Interpret the commands
-		var msg FlowdockMessage
-		unmarshalErr := json.Unmarshal(event.Data, &msg)
-		if unmarshalErr != nil {
-			log.Println(fmt.Sprintf("%s: %s", unmarshalErr, event.Data))
-			continue
-		}
-		go executeCommand(write, user, msg, client, prsParsedURL, prsApiKey, prsConfig, coordinator)
+		message := <-messages
+		go executeCommand(write, user, *message.RawContent, httpClient, prsParsedURL, prsApiKey, prsConfig, coordinator)
 	}
 }
