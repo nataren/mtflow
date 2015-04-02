@@ -209,7 +209,6 @@ func main() {
 
 	// Say hello to the flow
 	write := writeMessage(flowId, flowdockClient)
-	write("Hello, I am ready to accept commands")
 
 	// Build the streaming HTTP request to flowdock
 	log.Printf("I will stream from: organization='%s' flow='%s' user='%s' prsURL='%s' prsconfigfile='%s'", *organization, *flow, *user, *prsURL, *prsConfigFile)
