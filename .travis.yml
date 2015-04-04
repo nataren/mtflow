@@ -4,5 +4,9 @@ go:
   - tip
 
 install:
-  - go get github.com/bernerdschaefer/eventsource
-  - go get github.com/wm/go-flowdock/flowdock
+  - go get github.com/wm/go-flowdock/flowdocki
+  - go get code.google.com/p/go.tools/cmd/cover
+  - go get -u github.com/mattn/goveralls
+
+script:
+  - goveralls -coverprofile=profile.cov -service=travis-ci
