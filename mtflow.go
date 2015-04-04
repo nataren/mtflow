@@ -198,7 +198,7 @@ func main() {
 	// Figure out the flowId from the requested flow
 	flowId := ""
 	for _, f := range flows {
-		if strings.ToLower(*f.Name) == strings.ToLower(*flow) {
+		if strings.ToLower(*f.ParameterizedName) == strings.ToLower(*flow) {
 			flowId = *f.Id
 			break
 		}
