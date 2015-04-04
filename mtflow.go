@@ -133,10 +133,10 @@ func executeCommand(
 				write(msg)
 			}
 		default:
-			log.Println("The modifier '%s' is not handled", modifier)
+			log.Printf("The modifier '%s' is not handled\n", modifier)
 		}
 	default:
-		log.Println("The command '%s' is not handled", cmd)
+		log.Printf("The command '%s' is not handled\n", cmd)
 	}
 }
 
