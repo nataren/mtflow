@@ -5,6 +5,8 @@ import (
 	"errors"
 )
 
+const trimSymbols = " !#$%^&*()~<>?,"
+
 type CommandType uint
 const (
 	COMMAND_NONE  CommandType = iota
@@ -48,64 +50,46 @@ func (self CommandTarget) String() string {
 type Command struct {
 	Type            CommandType
 	Target          CommandTarget
-	Prefix          string
+	Mentions        []string
 }
 
 func ParseCommand(commandStr string) (*Command, error) {
-	trimmedCommand := strings.Trim(strings.ToLower(string(commandStr)), " ")
+	trimmedCommand := strings.Trim(strings.ToLower(string(commandStr)), trimSymbols)
 	parts := strings.Split(trimmedCommand, " ");
 	if len(parts) == 0 {
 		return nil, errors.New("The command was empty")
 	}
+	mentions := make([]string, 0, 10)
 	
-	// parse the prefix
-	prefix := strings.Trim(parts[0], " ,")
-	if len(prefix) < 2 || !strings.HasPrefix(prefix, "@") {
-		return nil, errors.New("The command did not start with @username")
-	}
-	parts = parts[1:]
-
 	// parse the command name
 	var commandType CommandType = COMMAND_NONE
-outerLoop:
-	for i, part := range parts {
+	var commandTarget CommandTarget = COMMAND_TARGET_NONE
+	for _, part := range parts {
+		part = strings.Trim(part, trimSymbols)
 		switch part {
 		case "start":
 			commandType = COMMAND_START
-			parts = parts[i+1:]
-			break outerLoop
 		case "stop":
 			commandType = COMMAND_STOP
-			parts = parts[i+1:]
-			break outerLoop
 		case "status":
 			commandType = COMMAND_STATUS
-			parts = parts[i+1:]
-			break outerLoop
+
+			// command targets
+		case "pr":
+			commandTarget = COMMAND_TARGET_PR
 		default:
-			continue
+			if len(part) > 1 && part[0] == '@' {
+				mentions = append(mentions, part)
+			}
 		}
 	}
 	if commandType == COMMAND_NONE {
 		return nil, errors.New("Could not find command type")
 	}
 
-	// parse command target
-	var commandTarget CommandTarget = COMMAND_TARGET_NONE
-outerLoop2:
-	for i, part := range parts {
-		switch part {
-		case "pr":
-			commandTarget = COMMAND_TARGET_PR
-			parts = parts[i+1:]
-			break outerLoop2
-		default:
-			continue
-		}
-	}
 	if commandTarget == COMMAND_TARGET_NONE {
 		return nil, errors.New("Could not find command target")
 	}
-	return &Command{Prefix: prefix, Type: commandType, Target: commandTarget}, nil
+	return &Command{Mentions: mentions, Type: commandType, Target: commandTarget}, nil
 }
 

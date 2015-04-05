@@ -11,13 +11,6 @@ func TestParse_empty_command(t *testing.T) {
 	}
 }
 
-func TestParse_without_prefix(t *testing.T) {
-	_, err := ParseCommand("pr start")
-	if err == nil {
-		t.Error("Command with no prefix should have error")
-	}
-}
-
 func TestParse_command_type(t *testing.T) {
 	comm, err := ParseCommand("   @nataren,    please    give me the status of pr   ")
 	if err != nil {
@@ -26,8 +19,30 @@ func TestParse_command_type(t *testing.T) {
 	if comm.Type != COMMAND_STATUS {
 		t.Error("Expected type status but was: ", comm.Type)
 	}
-	if comm.Prefix != "@nataren" {
-		t.Error("Expected prefix @nataren but was: ", comm.Prefix)
+	if comm.Mentions[0] != "@nataren" {
+		t.Error("Expected prefix @nataren but was: ", comm.Mentions)
+	}
+	if comm.Target != COMMAND_TARGET_PR {
+		t.Error("Expected type pr but was: ", comm.Target)
+	}
+}
+
+func TestParse_command_with_user_parsing(t *testing.T) {
+	comm, err := ParseCommand("   @nataren,    @yurig please    !@manuel! give me the status of pr   ")
+	if err != nil {
+		t.Error("Unexpected error: ", err.Error())
+	}
+	if comm.Type != COMMAND_STATUS {
+		t.Error("Expected type status but was: ", comm.Type)
+	}
+	if comm.Mentions[0] != "@nataren" {
+		t.Error("Expected prefix @nataren but was: ", comm.Mentions[0])
+	}
+	if comm.Mentions[1] != "@yurig" {
+		t.Error("Expected prefix @nataren but was: ", comm.Mentions[0])
+	}
+	if comm.Mentions[2] != "@manuel" {
+		t.Error("Expected prefix @nataren but was: ", comm.Mentions[0])
 	}
 	if comm.Target != COMMAND_TARGET_PR {
 		t.Error("Expected type pr but was: ", comm.Target)
