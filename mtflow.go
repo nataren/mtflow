@@ -69,7 +69,7 @@ func executeCommand(
 		}
 	}
 	if !containsUser {
-		log.Printf("The command does not have the mention '%s', instead it has menions '%+s', will skip it\n", prefix, command.Mentions)
+		log.Printf("The command does not have the mention '%s', instead it has mentions '%+s', will skip it\n", prefix, command.Mentions)
 		return
 	}
 	switch command.Type {
