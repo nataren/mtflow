@@ -15,18 +15,18 @@ import (
 )
 
 const (
-	FLOWDOCK_API_TOKEN = "FLOWDOCK_API_TOKEN"
-	PRS_API_KEY        = "PRS_API_KEY"
+	flowdockAPITokenEnvVar = "FLOWDOCK_API_TOKEN"
+	prsAPIKeyEnvVar        = "PRS_API_KEY"
 )
 
 func release(coordinator chan<- bool) {
 	coordinator <- true
 }
 
-func writeMessage(flowId string, client *flowdock.Client) func(msg string) {
+func writeMessage(flowID string, client *flowdock.Client) func(msg string) {
 	return func(msg string) {
 		_, _, err := client.Messages.Create(&flowdock.MessagesCreateOptions{
-			FlowID:  flowId,
+			FlowID:  flowID,
 			Content: msg,
 			Event:   "message",
 		})
@@ -42,7 +42,7 @@ func executeCommand(
 	msg json.RawMessage,
 	client *http.Client,
 	prsURL *url.URL,
-	prsApiKey string,
+	prsAPIKey string,
 	prsConfig []byte,
 	coordinator chan bool) {
 
@@ -76,7 +76,7 @@ func executeCommand(
 			startService := &http.Request{}
 			startService.Method = "POST"
 			q := prsURL.Query()
-			q.Set("apikey", prsApiKey)
+			q.Set("apikey", prsAPIKey)
 			startService.URL = &url.URL{
 				Host:     prsURL.Host,
 				Scheme:   prsURL.Scheme,
@@ -114,7 +114,7 @@ func executeCommand(
 			stopService := &http.Request{}
 			stopService.Method = "DELETE"
 			q := prsURL.Query()
-			q.Set("apikey", prsApiKey)
+			q.Set("apikey", prsAPIKey)
 			prsURL.RawQuery = q.Encode()
 			stopService.URL = prsURL
 			resp, err := client.Do(stopService)
@@ -143,8 +143,8 @@ func executeCommand(
 var (
 
 	// Environment variables definitions
-	accessToken = os.Getenv(FLOWDOCK_API_TOKEN)
-	prsApiKey   = os.Getenv(PRS_API_KEY)
+	accessToken = os.Getenv(flowdockAPITokenEnvVar)
+	prsAPIKey   = os.Getenv(prsAPIKeyEnvVar)
 
 	// Command-line arguments definition
 	organization  = flag.String("organization", "", "The organization name")
@@ -159,10 +159,10 @@ func main() {
 
 	// Validation
 	if accessToken == "" {
-		log.Fatalf("The '%s' environment variable is required", FLOWDOCK_API_TOKEN)
+		log.Fatalf("The '%s' environment variable is required", flowdockAPITokenEnvVar)
 	}
-	if prsApiKey == "" {
-		log.Fatalf("The '%s' environment variable is required", PRS_API_KEY)
+	if prsAPIKey == "" {
+		log.Fatalf("The '%s' environment variable is required", prsAPIKeyEnvVar)
 	}
 	if *organization == "" {
 		log.Fatal("'organization' is a required parameter")
@@ -196,19 +196,19 @@ func main() {
 	}
 
 	// Figure out the flowId from the requested flow
-	flowId := ""
+	flowID := ""
 	for _, f := range flows {
 		if strings.ToLower(*f.ParameterizedName) == strings.ToLower(*flow) {
-			flowId = *f.Id
+			flowID = *f.Id
 			break
 		}
 	}
-	if flowId == "" {
+	if flowID == "" {
 		log.Fatalf("Could not find the flow '%s' which you requested to listen from", *flow)
 	}
 
 	// Say hello to the flow
-	write := writeMessage(flowId, flowdockClient)
+	write := writeMessage(flowID, flowdockClient)
 
 	// Build the streaming HTTP request to flowdock
 	log.Printf("I will stream from: organization='%s' flow='%s' user='%s' prsURL='%s' prsconfigfile='%s'", *organization, *flow, *user, *prsURL, *prsConfigFile)
@@ -230,6 +230,6 @@ func main() {
 		if message.RawContent == nil {
 			continue
 		}
-		go executeCommand(write, *user, *message.RawContent, httpClient, prsParsedURL, prsApiKey, prsConfig, coordinator)
+		go executeCommand(write, *user, *message.RawContent, httpClient, prsParsedURL, prsAPIKey, prsConfig, coordinator)
 	}
 }
