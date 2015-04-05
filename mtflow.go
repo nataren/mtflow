@@ -53,24 +53,22 @@ func executeCommand(
 		}
 		release(coordinator)
 	}()
-	command := strings.Trim(strings.ToLower(string(msg[:])), "\"")
-	log.Printf("The received command: %s", command)
+	commandStr := strings.Trim(string(msg[:]), "\"")
+	command, err := ParseCommand(commandStr)
+	log.Printf("The received command: %s", commandStr)
+	if err != nil {
+		log.Printf("Error parsing command: %v", err.Error())
+		return
+	}
 	prefix := "@" + user
-	if !strings.HasPrefix(command, strings.ToLower(prefix)) {
-		log.Printf("The command '%s' does not have the prefix '%s', will skip it\n", command, prefix)
+	if command.Prefix != prefix {
+		log.Printf("The command does not have the prefix '%s', instead it has '%s', will skip it\n", prefix, command.Prefix)
 		return
 	}
-	parts := strings.Split(command, " ")
-	if len(parts) < 3 {
-		log.Printf("The command '%s' has the incorrect command format", command)
-		return
-	}
-	cmd := parts[1]
-	modifier := parts[2]
-	switch cmd {
-	case "start":
-		switch modifier {
-		case "pr":
+	switch command.Type {
+	case COMMAND_START:
+		switch command.Target {
+		case COMMAND_TARGET_PR:
 			<-coordinator
 			log.Println("I will start processing of pull requests")
 			startService := &http.Request{}
@@ -103,12 +101,11 @@ func executeCommand(
 				write(msg)
 			}
 		default:
-			log.Printf("The modifier '%s' is not handled\n", modifier)
+			log.Printf("The modifier '%s' is not handled\n", command.Target)
 		}
-
-	case "stop":
-		switch modifier {
-		case "pr":
+	case COMMAND_STOP:
+		switch command.Target {
+		case COMMAND_TARGET_PR:
 			<-coordinator
 			log.Println("I will handle 'stop pr' command")
 			stopService := &http.Request{}
@@ -133,10 +130,11 @@ func executeCommand(
 				write(msg)
 			}
 		default:
-			log.Printf("The modifier '%s' is not handled\n", modifier)
+			log.Printf("The modifier '%s' is not handled\n", command.Target)
 		}
 	default:
-		log.Printf("The command '%s' is not handled\n", cmd)
+		log.Printf("The command '%s' is not handled\n", commandStr)
+
 	}
 }
 
