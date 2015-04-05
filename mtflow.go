@@ -61,8 +61,15 @@ func executeCommand(
 		return
 	}
 	prefix := "@" + user
-	if command.Prefix != prefix {
-		log.Printf("The command does not have the prefix '%s', instead it has '%s', will skip it\n", prefix, command.Prefix)
+	containsUser := false
+	for _, mention := range command.Mentions {
+		if mention == prefix {
+			containsUser = true
+			break
+		}
+	}
+	if !containsUser {
+		log.Printf("The command does not have the mention '%s', instead it has menions '%+s', will skip it\n", prefix, command.Mentions)
 		return
 	}
 	switch command.Type {
@@ -134,7 +141,6 @@ func executeCommand(
 		}
 	default:
 		log.Printf("The command '%s' is not handled\n", commandStr)
-
 	}
 }
 
