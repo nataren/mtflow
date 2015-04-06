@@ -56,7 +56,15 @@ type Command struct {
 func ParseCommand(commandStr string) (*Command, error) {
 	trimmedCommand := strings.Trim(strings.ToLower(string(commandStr)), trimSymbols)
 	parts := strings.Split(trimmedCommand, " ");
-	if len(parts) == 0 {
+
+	// filter empty entries
+	filteredParts := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if len(part) > 0 {
+			filteredParts = append(filteredParts, part)
+		}
+	}
+	if len(filteredParts) == 0 {
 		return nil, errors.New("The command was empty")
 	}
 	mentions := make([]string, 0, 10)
@@ -64,7 +72,7 @@ func ParseCommand(commandStr string) (*Command, error) {
 	// parse the command name
 	var commandType CommandType = COMMAND_NONE
 	var commandTarget CommandTarget = COMMAND_TARGET_NONE
-	for _, part := range parts {
+	for _, part := range filteredParts {
 		part = strings.Trim(part, trimSymbols)
 		switch part {
 		case "start":
@@ -82,13 +90,6 @@ func ParseCommand(commandStr string) (*Command, error) {
 				mentions = append(mentions, part)
 			}
 		}
-	}
-	if commandType == COMMAND_NONE {
-		return nil, errors.New("Could not find command type")
-	}
-
-	if commandTarget == COMMAND_TARGET_NONE {
-		return nil, errors.New("Could not find command target")
 	}
 	return &Command{Mentions: mentions, Type: commandType, Target: commandTarget}, nil
 }

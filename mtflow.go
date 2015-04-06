@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"flag"
 	"github.com/wm/go-flowdock/flowdock"
@@ -19,10 +18,6 @@ const (
 	prsAPIKeyEnvVar        = "PRS_API_KEY"
 )
 
-func release(coordinator chan<- bool) {
-	coordinator <- true
-}
-
 func writeMessage(flowID string, client *flowdock.Client) func(msg string) {
 	return func(msg string) {
 		_, _, err := client.Messages.Create(&flowdock.MessagesCreateOptions{
@@ -37,22 +32,10 @@ func writeMessage(flowID string, client *flowdock.Client) func(msg string) {
 }
 
 func executeCommand(
-	write func(msg string),
+	commandChannel chan<- Command,
+	resultChannel chan<- string,
 	user string,
-	msg json.RawMessage,
-	client *http.Client,
-	prsURL *url.URL,
-	prsAPIKey string,
-	prsConfig []byte,
-	coordinator chan bool) {
-
-	// Catch the panicking go routine
-	defer func() {
-		if err := recover(); err != nil {
-			log.Printf("An error ocurred: %s", err)
-		}
-		release(coordinator)
-	}()
+	msg json.RawMessage) {
 	commandStr := strings.Trim(string(msg[:]), "\"")
 	command, err := ParseCommand(commandStr)
 	log.Printf("The received command: %s", commandStr)
@@ -69,79 +52,17 @@ func executeCommand(
 		}
 	}
 	if !containsUser {
-		log.Printf("The command does not have the mention '%s', instead it has menions '%+s', will skip it\n", prefix, command.Mentions)
+		log.Printf("The command does not have the mention '%s', instead it has mentions '%+v', will skip it\n", prefix, command.Mentions)
 		return
 	}
-	switch command.Type {
-	case COMMAND_START:
-		switch command.Target {
-		case COMMAND_TARGET_PR:
-			<-coordinator
-			log.Println("I will start processing of pull requests")
-			startService := &http.Request{}
-			startService.Method = "POST"
-			q := prsURL.Query()
-			q.Set("apikey", prsAPIKey)
-			startService.URL = &url.URL{
-				Host:     prsURL.Host,
-				Scheme:   prsURL.Scheme,
-				Opaque:   "/host/services",
-				RawQuery: q.Encode(),
-			}
-			startService.Header = map[string][]string{
-				"Content-Type": {"application/xml"},
-			}
-			startService.Body = ioutil.NopCloser(bytes.NewReader(prsConfig))
-			startService.ContentLength = int64(len(prsConfig))
-			resp, err := client.Do(startService)
-			if err != nil {
-				log.Panic(err)
-			}
-			defer resp.Body.Close()
-			statusCode := resp.StatusCode
-			if statusCode >= 200 && statusCode < 300 {
-				msg := "Successfully started processing pull requests"
-				log.Println(msg)
-				write(msg)
-			} else {
-				msg := "Failed to start processing pull requests: " + resp.Status
-				write(msg)
-			}
-		default:
-			log.Printf("The modifier '%s' is not handled\n", command.Target)
-		}
-	case COMMAND_STOP:
-		switch command.Target {
-		case COMMAND_TARGET_PR:
-			<-coordinator
-			log.Println("I will handle 'stop pr' command")
-			stopService := &http.Request{}
-			stopService.Method = "DELETE"
-			q := prsURL.Query()
-			q.Set("apikey", prsAPIKey)
-			prsURL.RawQuery = q.Encode()
-			stopService.URL = prsURL
-			resp, err := client.Do(stopService)
-			if err != nil {
-				log.Panic(err)
-			}
-			defer resp.Body.Close()
-			statusCode := resp.StatusCode
-			if statusCode >= 200 && statusCode < 300 {
-				msg := "Successfully stopped processing pull requests"
-				log.Println(msg)
-				write(msg)
-			} else {
-				msg := "Failed to stop processing pull requests: " + resp.Status
-				log.Println(msg)
-				write(msg)
-			}
-		default:
-			log.Printf("The modifier '%s' is not handled\n", command.Target)
-		}
-	default:
-		log.Printf("The command '%s' is not handled\n", commandStr)
+	if(command.Type == COMMAND_NONE || command.Target == COMMAND_TARGET_NONE) {
+		log.Println("Unknown command: ", commandStr)
+
+		//TODO(yurig): this should probably be the help menu
+		resultChannel <- "huh? I don't know this command."
+		return
 	}
+	commandChannel <- *command
 }
 
 var (
@@ -211,14 +132,8 @@ func main() {
 		log.Fatalf("Could not find the flow '%s' which you requested to listen from", *flow)
 	}
 
-	// Say hello to the flow
-	write := writeMessage(flowID, flowdockClient)
-
 	// Build the streaming HTTP request to flowdock
 	log.Printf("I will stream from: organization='%s' flow='%s' user='%s' prsURL='%s' prsconfigfile='%s'", *organization, *flow, *user, *prsURL, *prsConfigFile)
-
-	coordinator := make(chan bool)
-	go release(coordinator)
 
 	// Build the event source
 	messages, _, err := flowdockClient.Messages.Stream(accessToken, *organization, *flow)
@@ -228,12 +143,25 @@ func main() {
 	httpClient := &http.Client{
 		Timeout: time.Duration(5 * time.Second),
 	}
+
+	// Kick off the result handler
+	write := writeMessage(flowID, flowdockClient)
+	resultChannel := make(chan string)
+	go func() {
+		for { write(<-resultChannel) }
+	}()
+	
+	// Kick off the command handler
+	commandChannel := make(chan Command)
+	InitCommandHandler(prsParsedURL, &prsConfig, prsAPIKey, httpClient)
+	go RunCommandHandler(commandChannel, resultChannel)
+
+	// When we get a new message fire off the handler
 	for {
-		time.Sleep(1 * time.Second)
 		message := <-messages
 		if message.RawContent == nil {
 			continue
 		}
-		go executeCommand(write, *user, *message.RawContent, httpClient, prsParsedURL, prsAPIKey, prsConfig, coordinator)
+		executeCommand(commandChannel, resultChannel, *user, *message.RawContent)
 	}
 }

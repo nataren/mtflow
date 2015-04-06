@@ -11,6 +11,19 @@ func TestParse_empty_command(t *testing.T) {
 	}
 }
 
+func TestParse_unrecognized_command(t *testing.T) {
+	comm, err := ParseCommand(" lsdjhfl rwiuhgirehg erhgiuerhg oehrgioerhg,!#$% ")
+	if err != nil {
+		t.Error("No error expected")
+	}
+	if comm.Target != COMMAND_TARGET_NONE {
+		t.Error("command target none expexted")
+	}
+	if comm.Type != COMMAND_NONE {
+		t.Error("command type none expexted")
+	}
+}
+
 func TestParse_command_type(t *testing.T) {
 	comm, err := ParseCommand("   @nataren,    please    give me the status of pr   ")
 	if err != nil {
