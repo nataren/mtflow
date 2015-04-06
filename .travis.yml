@@ -5,3 +5,5 @@ go:
 
 install:
   - go get github.com/wm/go-flowdock/flowdock
+
+script: go test ./...
