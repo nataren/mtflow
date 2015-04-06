@@ -4,6 +4,7 @@ go:
   - tip
 
 install:
+  - go get golang.org/x/tools/cmd/vet
   - go get github.com/wm/go-flowdock/flowdock
 
 script:
