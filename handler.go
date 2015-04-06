@@ -32,7 +32,11 @@ func RunCommandHandler(commandChannel <-chan Command, resultChannel chan string)
 	}
 
 	// handle commands until the end of time
-	for { handleCommand(<-commandChannel, resultChannel) }
+	for {
+
+		// TODO(yurig): this is currently has no timeout mechanism 
+		go handleCommand(<-commandChannel, resultChannel)
+	}
 }
 
 func handleCommand(command Command, resultChannel chan string) {
