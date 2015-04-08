@@ -1,18 +1,19 @@
 package main
 
 import (
-	"strings"
 	"errors"
+	"strings"
 )
 
 const trimSymbols = " !#$%^&*()~<>?,"
 
 type CommandType uint
+
 const (
-	COMMAND_NONE  CommandType = iota
-	COMMAND_START             = iota
-	COMMAND_STOP              = iota
-	COMMAND_STATUS            = iota
+	COMMAND_NONE   CommandType = iota
+	COMMAND_START              = iota
+	COMMAND_STOP               = iota
+	COMMAND_STATUS             = iota
 )
 
 func (self CommandType) String() string {
@@ -31,6 +32,7 @@ func (self CommandType) String() string {
 }
 
 type CommandTarget uint
+
 const (
 	COMMAND_TARGET_NONE CommandTarget = iota
 	COMMAND_TARGET_PR                 = iota
@@ -48,14 +50,14 @@ func (self CommandTarget) String() string {
 }
 
 type Command struct {
-	Type            CommandType
-	Target          CommandTarget
-	Mentions        []string
+	Type     CommandType
+	Target   CommandTarget
+	Mentions []string
 }
 
 func ParseCommand(commandStr string) (*Command, error) {
 	trimmedCommand := strings.Trim(strings.ToLower(string(commandStr)), trimSymbols)
-	parts := strings.Split(trimmedCommand, " ");
+	parts := strings.Split(trimmedCommand, " ")
 
 	// filter empty entries
 	filteredParts := make([]string, 0, len(parts))
@@ -68,7 +70,7 @@ func ParseCommand(commandStr string) (*Command, error) {
 		return nil, errors.New("The command was empty")
 	}
 	mentions := make([]string, 0, 10)
-	
+
 	// parse the command name
 	var commandType CommandType = COMMAND_NONE
 	var commandTarget CommandTarget = COMMAND_TARGET_NONE
@@ -93,4 +95,3 @@ func ParseCommand(commandStr string) (*Command, error) {
 	}
 	return &Command{Mentions: mentions, Type: commandType, Target: commandTarget}, nil
 }
-
