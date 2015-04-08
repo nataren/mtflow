@@ -1,11 +1,11 @@
 package main
 
 import (
+	"bytes"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
-	"io/ioutil"
-	"bytes"
 )
 
 var _prsURL *url.URL
@@ -34,7 +34,7 @@ func RunCommandHandler(commandChannel <-chan Command, resultChannel chan string)
 	// handle commands until the end of time
 	for {
 
-		// TODO(yurig): this is currently has no timeout mechanism 
+		// TODO(yurig): this is currently has no timeout mechanism
 		go handleCommand(<-commandChannel, resultChannel)
 	}
 }
@@ -109,5 +109,3 @@ func handleCommand(command Command, resultChannel chan string) {
 		log.Printf("The command '%+v' is not handled\n", command)
 	}
 }
-
-

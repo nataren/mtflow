@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"github.com/wm/go-flowdock/flowdock"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -11,6 +10,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/wm/go-flowdock/flowdock"
 )
 
 const (
@@ -55,7 +56,7 @@ func executeCommand(
 		log.Printf("The command does not have the mention '%s', instead it has mentions '%+v', will skip it\n", prefix, command.Mentions)
 		return
 	}
-	if(command.Type == COMMAND_NONE || command.Target == COMMAND_TARGET_NONE) {
+	if command.Type == COMMAND_NONE || command.Target == COMMAND_TARGET_NONE {
 		log.Println("Unknown command: ", commandStr)
 
 		//TODO(yurig): this should probably be the help menu
@@ -148,9 +149,11 @@ func main() {
 	write := writeMessage(flowID, flowdockClient)
 	resultChannel := make(chan string)
 	go func() {
-		for { write(<-resultChannel) }
+		for {
+			write(<-resultChannel)
+		}
 	}()
-	
+
 	// Kick off the command handler
 	commandChannel := make(chan Command)
 	InitCommandHandler(prsParsedURL, &prsConfig, prsAPIKey, httpClient)
