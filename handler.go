@@ -13,6 +13,9 @@ var _prsConfig *[]byte
 var _prsAPIKey string
 var _client *http.Client
 
+// InitCommandHandler initializes a PullRequestService command
+// handler, you need to have a URL to the service, a configuration
+// definition, its API key, and a HTTP client so you can talk to it.
 func InitCommandHandler(prsURL *url.URL, prsConfig *[]byte, prsAPIKey string, client *http.Client) {
 	_prsURL = prsURL
 	_prsConfig = prsConfig
@@ -20,9 +23,8 @@ func InitCommandHandler(prsURL *url.URL, prsConfig *[]byte, prsAPIKey string, cl
 	_client = client
 }
 
-/*
- * Handle commands, this should be called as a goroutine
- */
+// RunCommandHandler It is the top level function that must be called
+// as a goroutine to handle a command.
 func RunCommandHandler(commandChannel <-chan Command, resultChannel chan string) {
 	if resultChannel == nil {
 		panic("Must supply a channel for command results")
@@ -41,9 +43,9 @@ func RunCommandHandler(commandChannel <-chan Command, resultChannel chan string)
 
 func handleCommand(command Command, resultChannel chan string) {
 	switch command.Type {
-	case COMMAND_START:
+	case CommandStart:
 		switch command.Target {
-		case COMMAND_TARGET_PR:
+		case CommandTargetPR:
 			log.Println("I will start processing of pull requests")
 			startService := &http.Request{}
 			startService.Method = "POST"
@@ -77,9 +79,9 @@ func handleCommand(command Command, resultChannel chan string) {
 		default:
 			log.Printf("The modifier '%s' is not handled\n", command.Target)
 		}
-	case COMMAND_STOP:
+	case CommandStop:
 		switch command.Target {
-		case COMMAND_TARGET_PR:
+		case CommandTargetPR:
 			log.Println("I will handle 'stop pr' command")
 			stopService := &http.Request{}
 			stopService.Method = "DELETE"
