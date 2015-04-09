@@ -16,10 +16,10 @@ func TestParse_unrecognized_command(t *testing.T) {
 	if err != nil {
 		t.Error("No error expected")
 	}
-	if comm.Target != COMMAND_TARGET_NONE {
+	if comm.Target != CommandTargetNone {
 		t.Error("command target none expexted")
 	}
-	if comm.Type != COMMAND_NONE {
+	if comm.Type != CommandNone {
 		t.Error("command type none expexted")
 	}
 }
@@ -29,13 +29,13 @@ func TestParse_command_type(t *testing.T) {
 	if err != nil {
 		t.Error("Unexpected error: ", err.Error())
 	}
-	if comm.Type != COMMAND_STATUS {
+	if comm.Type != CommandStatus {
 		t.Error("Expected type status but was: ", comm.Type)
 	}
 	if comm.Mentions[0] != "@nataren" {
 		t.Error("Expected prefix @nataren but was: ", comm.Mentions)
 	}
-	if comm.Target != COMMAND_TARGET_PR {
+	if comm.Target != CommandTargetPR {
 		t.Error("Expected type pr but was: ", comm.Target)
 	}
 }
@@ -45,7 +45,7 @@ func TestParse_command_with_user_parsing(t *testing.T) {
 	if err != nil {
 		t.Error("Unexpected error: ", err.Error())
 	}
-	if comm.Type != COMMAND_STATUS {
+	if comm.Type != CommandStatus {
 		t.Error("Expected type status but was: ", comm.Type)
 	}
 	if comm.Mentions[0] != "@nataren" {
@@ -57,7 +57,7 @@ func TestParse_command_with_user_parsing(t *testing.T) {
 	if comm.Mentions[2] != "@manuel" {
 		t.Error("Expected prefix @nataren but was: ", comm.Mentions[0])
 	}
-	if comm.Target != COMMAND_TARGET_PR {
+	if comm.Target != CommandTargetPR {
 		t.Error("Expected type pr but was: ", comm.Target)
 	}
 }
