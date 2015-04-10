@@ -51,6 +51,9 @@ const (
 
 	// CommandTargetPR is the PullRequestService target name
 	CommandTargetPR = iota
+
+	// CommandTargetMtFlow is this program :)
+	CommandTargetMtFlow = iota
 )
 
 func (commandTarget CommandTarget) String() string {
@@ -59,6 +62,8 @@ func (commandTarget CommandTarget) String() string {
 		return "none"
 	case CommandTargetPR:
 		return "pr"
+	case CommandTargetMtFlow:
+		return "mtflow"
 	default:
 		panic("CommandTarget switch not considering all cases!")
 	}
@@ -105,6 +110,8 @@ func ParseCommand(commandStr string) (*Command, error) {
 			// command targets
 		case "pr":
 			commandTarget = CommandTargetPR
+		case "mtflow":
+			commandTarget = CommandTargetMtFlow
 		default:
 			if len(part) > 1 && part[0] == '@' {
 				mentions = append(mentions, part)

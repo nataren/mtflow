@@ -2,10 +2,13 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
+	"runtime"
+	"time"
 )
 
 var _prsURL *url.URL
@@ -35,9 +38,22 @@ func RunCommandHandler(commandChannel <-chan Command, resultChannel chan string)
 
 	// handle commands until the end of time
 	for {
+		newCommand := <-commandChannel
+		go func() {
 
-		// TODO(yurig): this is currently has no timeout mechanism
-		go handleCommand(<-commandChannel, resultChannel)
+			// This is a buffered channel so that a goroutine that has timed out
+			// has a place to respond to
+			dedicatedResultChan := make(chan string, 1)
+
+			// Fire off handling of command
+			go handleCommand(newCommand, dedicatedResultChan)
+			select {
+			case res := <-dedicatedResultChan:
+				resultChannel <- res
+			case <-time.After(30 * time.Second):
+				resultChannel <- "The operation took more than 30 seconds and timed out, sorry :("
+			}
+		}()
 	}
 }
 
@@ -106,6 +122,16 @@ func handleCommand(command Command, resultChannel chan string) {
 			}
 		default:
 			log.Printf("The modifier '%s' is not handled\n", command.Target)
+		}
+	case CommandStatus:
+		switch command.Target {
+		case CommandTargetMtFlow:
+			log.Println("I will handle 'status mtflow' command")
+
+			// get some memory statistics
+			var memStats runtime.MemStats
+			runtime.ReadMemStats(&memStats)
+			resultChannel <- fmt.Sprintf("I am chugging along, thanks for asking.\n\n# of Goroutines: %v\n# of CPU: %v\nTotal Memory: %v", runtime.NumGoroutine(), runtime.NumCPU(), memStats.Alloc)
 		}
 	default:
 		log.Printf("The command '%+v' is not handled\n", command)
