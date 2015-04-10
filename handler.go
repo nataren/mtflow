@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 var _prsURL *url.URL
@@ -35,9 +36,22 @@ func RunCommandHandler(commandChannel <-chan Command, resultChannel chan string)
 
 	// handle commands until the end of time
 	for {
+		newCommand := <-commandChannel
+		go func() {
 
-		// TODO(yurig): this is currently has no timeout mechanism
-		go handleCommand(<-commandChannel, resultChannel)
+			// This is a buffered channel so that a goroutine that has timed out
+			// has a place to respond to
+			dedicatedResultChan := make(chan string, 1)
+
+			// Fire off handling of command
+			go handleCommand(newCommand, dedicatedResultChan)
+			select {
+			case res := <-dedicatedResultChan:
+				resultChannel <- res
+			case <-time.After(30 * time.Second):
+				resultChannel <- "The operation took more than 30 seconds and timed out, sorry :("
+			}
+		}()
 	}
 }
 
