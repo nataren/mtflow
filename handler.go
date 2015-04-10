@@ -2,10 +2,12 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
+	"runtime"
 	"time"
 )
 
@@ -120,6 +122,16 @@ func handleCommand(command Command, resultChannel chan string) {
 			}
 		default:
 			log.Printf("The modifier '%s' is not handled\n", command.Target)
+		}
+	case CommandStatus:
+		switch command.Target {
+		case CommandTargetMtFlow:
+			log.Println("I will handle 'status mtflow' command")
+
+			// get some memory statistics
+			var memStats runtime.MemStats
+			runtime.ReadMemStats(&memStats)
+			resultChannel <- fmt.Sprintf("I am chugging along, thanks for asking.\n\n# of Goroutines: %v\n# of CPU: %v\nTotal Memory: %v", runtime.NumGoroutine(), runtime.NumCPU(), memStats.Alloc)
 		}
 	default:
 		log.Printf("The command '%+v' is not handled\n", command)
