@@ -80,9 +80,14 @@ func handleCommand(command Command, resultChannel chan string) {
 			startService.ContentLength = int64(len(*_prsConfig))
 			resp, err := _client.Do(startService)
 			if err != nil {
-				log.Panic(err)
+				log.Println(err)
+				return
 			}
-			defer resp.Body.Close()
+			defer func() {
+				if resp != nil {
+					resp.Body.Close()
+				}
+			}()
 			statusCode := resp.StatusCode
 			if statusCode >= 200 && statusCode < 300 {
 				msg := "Successfully started processing pull requests"
@@ -107,9 +112,14 @@ func handleCommand(command Command, resultChannel chan string) {
 			stopService.URL = _prsURL
 			resp, err := _client.Do(stopService)
 			if err != nil {
-				log.Panic(err)
+				log.Println(err)
+				return
 			}
-			defer resp.Body.Close()
+			defer func() {
+				if resp != nil {
+					resp.Body.Close()
+				}
+			}()
 			statusCode := resp.StatusCode
 			if statusCode >= 200 && statusCode < 300 {
 				msg := "Successfully stopped processing pull requests"
