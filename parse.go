@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"log"
 	"strings"
 )
 
@@ -37,7 +38,8 @@ func (commandType CommandType) String() string {
 	case CommandStatus:
 		return "status"
 	default:
-		panic("CommandType switch not considering all cases!")
+		log.Println("CommandType switch not considering all cases!")
+		return ""
 	}
 }
 
@@ -65,7 +67,8 @@ func (commandTarget CommandTarget) String() string {
 	case CommandTargetMtFlow:
 		return "mtflow"
 	default:
-		panic("CommandTarget switch not considering all cases!")
+		log.Println("CommandTarget switch not considering all cases!")
+		return ""
 	}
 }
 
