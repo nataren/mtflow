@@ -112,19 +112,6 @@ func main() {
 	}
 }
 
-func writeMessage(flowID string, client *flowdock.Client) func(msg string) {
-	return func(msg string) {
-		_, _, err := client.Messages.Create(&flowdock.MessagesCreateOptions{
-			FlowID:  flowID,
-			Content: msg,
-			Event:   "message",
-		})
-		if err != nil {
-			log.Println(err)
-		}
-	}
-}
-
 func executeCommand(
 	commandChannel chan<- Command,
 	resultChannel chan<- string,
@@ -157,6 +144,19 @@ func executeCommand(
 		return
 	}
 	commandChannel <- *command
+}
+
+func writeMessage(flowID string, client *flowdock.Client) func(msg string) {
+	return func(msg string) {
+		_, _, err := client.Messages.Create(&flowdock.MessagesCreateOptions{
+			FlowID:  flowID,
+			Content: msg,
+			Event:   "message",
+		})
+		if err != nil {
+			log.Println(err)
+		}
+	}
 }
 
 func assertNonEmptyEnvVar(envVar string, envVarName string) {
