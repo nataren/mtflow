@@ -66,45 +66,49 @@ func executeCommand(
 	commandChannel <- *command
 }
 
-var (
+func assertNonEmptyEnvVar(envVar string, envVarName string) {
+	if envVar == "" {
+		log.Fatalf("The '%s' environment variable is required", envVarName)
+	}
+}
 
-	// Environment variables definitions
-	accessToken = os.Getenv(flowdockAPITokenEnvVar)
-	prsAPIKey   = os.Getenv(prsAPIKeyEnvVar)
-
-	// Command-line arguments definition
-	organization  = flag.String("organization", "", "The organization name")
-	flow          = flag.String("flow", "", "The flow to stream from")
-	user          = flag.String("user", "", "The name of the user which commands are being directed to")
-	prsURL        = flag.String("prsurl", "", "The URL where we can talk to the PullRequestService")
-	prsConfigFile = flag.String("prsconfigfile", "", "Path to the configuration file for PullRequestService")
-)
+func assertNonEmptyFlag(flag *string, flagName string) {
+	if *flag == "" {
+		log.Fatalf("'%s' is a required parameter", flagName)
+	}
+}
 
 func main() {
+	const (
+		orgFlagName           = "organization"
+		flowFlagName          = "flow"
+		userFlagName          = "user"
+		prsURLFlagName        = "prsurl"
+		prsConfigFileFlagName = "prsconfigfile"
+	)
+	var (
+
+		// Environment variables definitions
+		accessToken = os.Getenv(flowdockAPITokenEnvVar)
+		prsAPIKey   = os.Getenv(prsAPIKeyEnvVar)
+
+		// Command-line arguments definition
+		org           = flag.String(orgFlagName, "", "The organization name (required)")
+		flow          = flag.String(flowFlagName, "", "The flow to stream from (required)")
+		user          = flag.String(userFlagName, "", "The name of the user which commands are being directed to (required)")
+		prsURL        = flag.String(prsURLFlagName, "", "The URL where we can talk to the PullRequestService (required)")
+		prsConfigFile = flag.String(prsConfigFileFlagName, "", "Path to the configuration file for PullRequestService (required)")
+	)
 	flag.Parse()
 
 	// Validation
-	if accessToken == "" {
-		log.Fatalf("The '%s' environment variable is required", flowdockAPITokenEnvVar)
-	}
-	if prsAPIKey == "" {
-		log.Fatalf("The '%s' environment variable is required", prsAPIKeyEnvVar)
-	}
-	if *organization == "" {
-		log.Fatal("'organization' is a required parameter")
-	}
-	if *flow == "" {
-		log.Fatal("'flow' is a required parameter")
-	}
-	if *user == "" {
-		log.Fatal("'user' is a required parameter")
-	}
-	if *prsURL == "" {
-		log.Fatal("'prsurl' is a required parameter")
-	}
-	if *prsConfigFile == "" {
-		log.Fatal("'prsconfigfile' is a required parameter")
-	}
+	assertNonEmptyEnvVar(accessToken, flowdockAPITokenEnvVar)
+	assertNonEmptyEnvVar(prsAPIKey, prsAPIKeyEnvVar)
+	assertNonEmptyFlag(org, orgFlagName)
+	assertNonEmptyFlag(flow, flowFlagName)
+	assertNonEmptyFlag(user, userFlagName)
+	assertNonEmptyFlag(prsURL, prsURLFlagName)
+	assertNonEmptyFlag(prsConfigFile, prsConfigFileFlagName)
 	prsConfig, err := ioutil.ReadFile(*prsConfigFile)
 	if err != nil {
 		log.Fatal(err)
@@ -115,7 +119,7 @@ func main() {
 	}
 
 	// Setup the Flowdock REST client
-	flowdockClient := flowdock.NewClientWithToken(&http.Client{}, accessToken)
+	flowdockClient := flowdock.NewClientWithToken(&http.Client{Timeout: time.Duration(5 * time.Second)}, accessToken)
 	flows, _, flowsErr := flowdockClient.Flows.List(true, &flowdock.FlowsListOptions{User: false})
 	if flowsErr != nil {
 		log.Println(flowsErr)
@@ -134,10 +138,10 @@ func main() {
 	}
 
 	// Build the streaming HTTP request to flowdock
-	log.Printf("I will stream from: organization='%s' flow='%s' user='%s' prsURL='%s' prsconfigfile='%s'", *organization, *flow, *user, *prsURL, *prsConfigFile)
+	log.Printf("I will stream from: organization='%s' flow='%s' user='%s' prsURL='%s' prsconfigfile='%s'", *org, *flow, *user, *prsURL, *prsConfigFile)
 
 	// Build the event source
-	messages, _, err := flowdockClient.Messages.Stream(accessToken, *organization, *flow)
+	messages, _, err := flowdockClient.Messages.Stream(accessToken, *org, *flow)
 	if err != nil {
 		log.Fatal(err)
 	}
