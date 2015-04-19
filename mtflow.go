@@ -14,72 +14,11 @@ import (
 	"github.com/wm/go-flowdock/flowdock"
 )
 
-const (
-	flowdockAPITokenEnvVar = "FLOWDOCK_API_TOKEN"
-	prsAPIKeyEnvVar        = "PRS_API_KEY"
-)
-
-func writeMessage(flowID string, client *flowdock.Client) func(msg string) {
-	return func(msg string) {
-		_, _, err := client.Messages.Create(&flowdock.MessagesCreateOptions{
-			FlowID:  flowID,
-			Content: msg,
-			Event:   "message",
-		})
-		if err != nil {
-			log.Println(err)
-		}
-	}
-}
-
-func executeCommand(
-	commandChannel chan<- Command,
-	resultChannel chan<- string,
-	user string,
-	msg json.RawMessage) {
-	commandStr := strings.Trim(string(msg[:]), "\"")
-	command, err := ParseCommand(commandStr)
-	log.Printf("The received command: %s", commandStr)
-	if err != nil {
-		log.Printf("Error parsing command: %v", err.Error())
-		return
-	}
-	prefix := "@" + user
-	containsUser := false
-	for _, mention := range command.Mentions {
-		if mention == prefix {
-			containsUser = true
-			break
-		}
-	}
-	if !containsUser {
-		log.Printf("The command does not have the mention '%s', instead it has mentions '%+v', will skip it\n", prefix, command.Mentions)
-		return
-	}
-	if command.Type == CommandNone || command.Target == CommandTargetNone {
-		log.Println("Unknown command: ", commandStr)
-
-		//TODO(yurig): this should probably be the help menu
-		resultChannel <- "huh? I don't know this command."
-		return
-	}
-	commandChannel <- *command
-}
-
-func assertNonEmptyEnvVar(envVar string, envVarName string) {
-	if envVar == "" {
-		log.Fatalf("The '%s' environment variable is required", envVarName)
-	}
-}
-
-func assertNonEmptyFlag(flag *string, flagName string) {
-	if *flag == "" {
-		log.Fatalf("'%s' is a required parameter", flagName)
-	}
-}
-
 func main() {
 	const (
+		flowdockAPITokenEnvVar = "FLOWDOCK_API_TOKEN"
+		prsAPIKeyEnvVar        = "PRS_API_KEY"
+
 		orgFlagName           = "organization"
 		flowFlagName          = "flow"
 		userFlagName          = "user"
@@ -170,5 +109,64 @@ func main() {
 			continue
 		}
 		executeCommand(commandChannel, resultChannel, *user, *message.RawContent)
+	}
+}
+
+func writeMessage(flowID string, client *flowdock.Client) func(msg string) {
+	return func(msg string) {
+		_, _, err := client.Messages.Create(&flowdock.MessagesCreateOptions{
+			FlowID:  flowID,
+			Content: msg,
+			Event:   "message",
+		})
+		if err != nil {
+			log.Println(err)
+		}
+	}
+}
+
+func executeCommand(
+	commandChannel chan<- Command,
+	resultChannel chan<- string,
+	user string,
+	msg json.RawMessage) {
+	commandStr := strings.Trim(string(msg[:]), "\"")
+	command, err := ParseCommand(commandStr)
+	log.Printf("The received command: %s", commandStr)
+	if err != nil {
+		log.Printf("Error parsing command: %v", err.Error())
+		return
+	}
+	prefix := "@" + user
+	containsUser := false
+	for _, mention := range command.Mentions {
+		if mention == prefix {
+			containsUser = true
+			break
+		}
+	}
+	if !containsUser {
+		log.Printf("The command does not have the mention '%s', instead it has mentions '%+v', will skip it\n", prefix, command.Mentions)
+		return
+	}
+	if command.Type == CommandNone || command.Target == CommandTargetNone {
+		log.Println("Unknown command: ", commandStr)
+
+		//TODO(yurig): this should probably be the help menu
+		resultChannel <- "huh? I don't know this command."
+		return
+	}
+	commandChannel <- *command
+}
+
+func assertNonEmptyEnvVar(envVar string, envVarName string) {
+	if envVar == "" {
+		log.Fatalf("The '%s' environment variable is required", envVarName)
+	}
+}
+
+func assertNonEmptyFlag(flag *string, flagName string) {
+	if *flag == "" {
+		log.Fatalf("'%s' is a required parameter", flagName)
 	}
 }
