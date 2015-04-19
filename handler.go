@@ -66,7 +66,7 @@ func handleCommand(command Command, resultChannel chan string) {
 			startService := &http.Request{}
 			startService.Method = "POST"
 			q := _prsURL.Query()
-			q.Set("apikey", prsAPIKey)
+			q.Set("apikey", _prsAPIKey)
 			startService.URL = &url.URL{
 				Host:     _prsURL.Host,
 				Scheme:   _prsURL.Scheme,
@@ -107,7 +107,7 @@ func handleCommand(command Command, resultChannel chan string) {
 			stopService := &http.Request{}
 			stopService.Method = "DELETE"
 			q := _prsURL.Query()
-			q.Set("apikey", prsAPIKey)
+			q.Set("apikey", _prsAPIKey)
 			_prsURL.RawQuery = q.Encode()
 			stopService.URL = _prsURL
 			resp, err := _client.Do(stopService)
