@@ -18,13 +18,13 @@ const (
 	CommandNone CommandType = iota
 
 	// CommandStart command starts 'something'
-	CommandStart = iota
+	CommandStart
 
 	// CommandStop command stops 'something'
-	CommandStop = iota
+	CommandStop
 
 	// CommandStatus command gets the status of 'something'
-	CommandStatus = iota
+	CommandStatus
 )
 
 func (commandType CommandType) String() string {
@@ -52,10 +52,10 @@ const (
 	CommandTargetNone CommandTarget = iota
 
 	// CommandTargetPR is the PullRequestService target name
-	CommandTargetPR = iota
+	CommandTargetPR
 
 	// CommandTargetMtFlow is this program :)
-	CommandTargetMtFlow = iota
+	CommandTargetMtFlow
 )
 
 func (commandTarget CommandTarget) String() string {
