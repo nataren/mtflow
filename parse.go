@@ -25,6 +25,9 @@ const (
 
 	// CommandStatus command gets the status of 'something'
 	CommandStatus
+
+	// CommandFortune command gets you that
+	CommandFortune
 )
 
 func (commandType CommandType) String() string {
@@ -37,6 +40,8 @@ func (commandType CommandType) String() string {
 		return "stop"
 	case CommandStatus:
 		return "status"
+	case CommandFortune:
+		return "fortune"
 	default:
 		log.Println("CommandType switch not considering all cases!")
 		return ""
@@ -109,8 +114,10 @@ func ParseCommand(commandStr string) (*Command, error) {
 			commandType = CommandStop
 		case "status":
 			commandType = CommandStatus
+		case "fortune":
+			commandType = CommandFortune
 
-			// command targets
+		// command targets
 		case "pr":
 			commandTarget = CommandTargetPR
 		case "mtflow":
