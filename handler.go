@@ -159,7 +159,7 @@ func handleCommand(command Command, resultChannel chan string) {
 			resultChannel <- fortuneCookieString
 			return
 		}
-		resultChannel <- string(cowsaying)
+		resultChannel <- fmt.Sprintf("```\n%s\n```", string(cowsaying))
 	default:
 		log.Printf("The command '%+v' is not handled\n", command)
 	}
