@@ -136,7 +136,7 @@ func executeCommand(
 		log.Printf("The command does not have the mention '%s', instead it has mentions '%+v', will skip it\n", prefix, command.Mentions)
 		return
 	}
-	if command.Type == CommandNone || command.Target == CommandTargetNone {
+	if command.Type == CommandNone || (command.Type != CommandFortune && command.Target == CommandTargetNone) {
 		log.Println("Unknown command: ", commandStr)
 
 		//TODO(yurig): this should probably be the help menu

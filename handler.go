@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os/exec"
 	"runtime"
 	"time"
 )
@@ -143,6 +144,22 @@ func handleCommand(command Command, resultChannel chan string) {
 			runtime.ReadMemStats(&memStats)
 			resultChannel <- fmt.Sprintf("I am chugging along, thanks for asking.\n\n# of Goroutines: %v\n# of CPU: %v\nTotal Memory: %v", runtime.NumGoroutine(), runtime.NumCPU(), memStats.Alloc)
 		}
+	case CommandFortune:
+		log.Println("I will handle the 'fortune' command")
+		fortuneCookie, err := exec.Command("fortune").Output()
+		if err != nil {
+			log.Println(err)
+			resultChannel <- "No cookie for you!"
+			return
+		}
+		fortuneCookieString := string(fortuneCookie)
+		cowsaying, err := exec.Command("cowsay", fortuneCookieString).Output()
+		if err != nil {
+			log.Println(err)
+			resultChannel <- fortuneCookieString
+			return
+		}
+		resultChannel <- string(cowsaying)
 	default:
 		log.Printf("The command '%+v' is not handled\n", command)
 	}
