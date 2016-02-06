@@ -28,6 +28,10 @@ const (
 
 	// CommandFortune command gets you that
 	CommandFortune
+
+	// CommandSearch command allows you to search conversations from
+	// the past
+	CommandSearch
 )
 
 func (commandType CommandType) String() string {
@@ -42,6 +46,8 @@ func (commandType CommandType) String() string {
 		return "status"
 	case CommandFortune:
 		return "fortune"
+	case CommandSearch:
+		return "search"
 	default:
 		log.Println("CommandType switch not considering all cases!")
 		return ""
@@ -117,6 +123,8 @@ func ParseCommand(commandStr string, threadId string) (*Command, error) {
 			commandType = CommandStatus
 		case "fortune":
 			commandType = CommandFortune
+		case "search":
+			commandType = CommandSearch
 
 		// command targets
 		case "pr":
