@@ -83,10 +83,11 @@ type Command struct {
 	Type     CommandType
 	Target   CommandTarget
 	Mentions []string
+	ThreadId string
 }
 
 // ParseCommand takes care of turning a  text string into a proper command
-func ParseCommand(commandStr string) (*Command, error) {
+func ParseCommand(commandStr string, threadId string) (*Command, error) {
 	trimmedCommand := strings.Trim(strings.ToLower(string(commandStr)), trimSymbols)
 	parts := strings.Split(trimmedCommand, " ")
 
@@ -128,5 +129,5 @@ func ParseCommand(commandStr string) (*Command, error) {
 			}
 		}
 	}
-	return &Command{Mentions: mentions, Type: commandType, Target: commandTarget}, nil
+	return &Command{Mentions: mentions, Type: commandType, Target: commandTarget, ThreadId: threadId}, nil
 }

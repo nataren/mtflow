@@ -29,7 +29,7 @@ func InitCommandHandler(prsURL *url.URL, prsConfig *[]byte, prsAPIKey string, cl
 
 // RunCommandHandler It is the top level function that must be called
 // as a goroutine to handle a command.
-func RunCommandHandler(commandChannel <-chan Command, resultChannel chan string) {
+func RunCommandHandler(commandChannel <-chan Command, resultChannel chan Result) {
 	if resultChannel == nil {
 		panic("Must supply a channel for command results")
 	}
@@ -50,9 +50,9 @@ func RunCommandHandler(commandChannel <-chan Command, resultChannel chan string)
 			go handleCommand(newCommand, dedicatedResultChan)
 			select {
 			case res := <-dedicatedResultChan:
-				resultChannel <- res
+				resultChannel <- Result{Message: res, ThreadId: newCommand.ThreadId}
 			case <-time.After(30 * time.Second):
-				resultChannel <- "The operation took more than 30 seconds and timed out, sorry :("
+				resultChannel <- Result{Message: "The operation took more than 30 seconds and timed out, sorry :(", ThreadId: newCommand.ThreadId}
 			}
 		}()
 	}
@@ -99,7 +99,9 @@ func handleCommand(command Command, resultChannel chan string) {
 				resultChannel <- msg
 			}
 		default:
-			log.Printf("The modifier '%s' is not handled\n", command.Target)
+			msg := fmt.Sprintf("The modifier '%s' is not handled\n", command.Target)
+			log.Println(msg)
+			resultChannel <- msg
 		}
 	case CommandStop:
 		switch command.Target {
@@ -132,7 +134,9 @@ func handleCommand(command Command, resultChannel chan string) {
 				resultChannel <- msg
 			}
 		default:
-			log.Printf("The modifier '%s' is not handled\n", command.Target)
+			msg := fmt.Sprintf("The modifier '%s' is not handled\n", command.Target)
+			log.Println(msg)
+			resultChannel <- msg
 		}
 	case CommandStatus:
 		switch command.Target {
