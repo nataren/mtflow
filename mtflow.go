@@ -90,10 +90,11 @@ func main() {
 
 	// Kick off the result handler
 	write := writeMessage(flowID, flowdockClient)
-	resultChannel := make(chan string)
+	resultChannel := make(chan Result)
 	go func() {
 		for {
-			write(<-resultChannel)
+			result := <-resultChannel
+			write(result.Message, result.ThreadId)
 		}
 	}()
 
@@ -108,17 +109,24 @@ func main() {
 		if message.RawContent == nil {
 			continue
 		}
-		executeCommand(commandChannel, resultChannel, *user, *message.RawContent)
+		tmp := message.ThreadId
+		var threadId string
+		if tmp != nil {
+			threadId = *tmp
+		}
+		executeCommand(commandChannel, resultChannel, *user, *message.RawContent, threadId)
 	}
 }
 
 func executeCommand(
 	commandChannel chan<- Command,
-	resultChannel chan<- string,
+	resultChannel chan<- Result,
 	user string,
-	msg json.RawMessage) {
+	msg json.RawMessage,
+	threadId string,
+) {
 	commandStr := strings.Trim(string(msg[:]), "\"")
-	command, err := ParseCommand(commandStr)
+	command, err := ParseCommand(commandStr, threadId)
 	log.Printf("The received command: %s", commandStr)
 	if err != nil {
 		log.Printf("Error parsing command: %v", err.Error())
@@ -140,18 +148,19 @@ func executeCommand(
 		log.Println("Unknown command: ", commandStr)
 
 		//TODO(yurig): this should probably be the help menu
-		resultChannel <- "huh? I don't know this command."
+		resultChannel <- Result{Message: "huh? I don't know this command.", ThreadId: threadId}
 		return
 	}
 	commandChannel <- *command
 }
 
-func writeMessage(flowID string, client *flowdock.Client) func(msg string) {
-	return func(msg string) {
+func writeMessage(flowID string, client *flowdock.Client) func(msg string, threadId string) {
+	return func(msg string, threadId string) {
 		_, _, err := client.Messages.Create(&flowdock.MessagesCreateOptions{
-			FlowID:  flowID,
-			Content: msg,
-			Event:   "message",
+			FlowID:   flowID,
+			Content:  msg,
+			Event:    "message",
+			ThreadId: threadId,
 		})
 		if err != nil {
 			log.Println(err)
@@ -169,4 +178,9 @@ func assertNonEmptyFlag(flag *string, flagName string) {
 	if *flag == "" {
 		log.Fatalf("'%s' is a required parameter", flagName)
 	}
+}
+
+type Result struct {
+	Message  string
+	ThreadId string
 }
