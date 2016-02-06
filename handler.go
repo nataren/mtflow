@@ -99,7 +99,7 @@ func handleCommand(command Command, resultChannel chan string) {
 				resultChannel <- msg
 			}
 		default:
-			msg := fmt.Sprintf("The modifier '%s' is not handled\n", command.Target)
+			msg := fmt.Sprintf("The modifier '%v' is not handled\n", command.Target)
 			log.Println(msg)
 			resultChannel <- msg
 		}
@@ -134,7 +134,7 @@ func handleCommand(command Command, resultChannel chan string) {
 				resultChannel <- msg
 			}
 		default:
-			msg := fmt.Sprintf("The modifier '%s' is not handled\n", command.Target)
+			msg := fmt.Sprintf("The modifier '%v' is not handled\n", command.Target)
 			log.Println(msg)
 			resultChannel <- msg
 		}
