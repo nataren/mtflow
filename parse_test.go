@@ -5,14 +5,14 @@ import (
 )
 
 func TestParse_empty_command(t *testing.T) {
-	_, err := ParseCommand("    ")
+	_, err := ParseCommand("    ", "1")
 	if err == nil {
 		t.Error("Empty command should have error")
 	}
 }
 
 func TestParse_unrecognized_command(t *testing.T) {
-	comm, err := ParseCommand(" lsdjhfl rwiuhgirehg erhgiuerhg oehrgioerhg,!#$% ")
+	comm, err := ParseCommand(" lsdjhfl rwiuhgirehg erhgiuerhg oehrgioerhg,!#$% ", "2")
 	if err != nil {
 		t.Error("No error expected")
 	}
@@ -25,7 +25,7 @@ func TestParse_unrecognized_command(t *testing.T) {
 }
 
 func TestParse_command_type(t *testing.T) {
-	comm, err := ParseCommand("   @nataren,    please    give me the status of pr   ")
+	comm, err := ParseCommand("   @nataren,    please    give me the status of pr   ", "3")
 	if err != nil {
 		t.Error("Unexpected error: ", err.Error())
 	}
@@ -41,7 +41,7 @@ func TestParse_command_type(t *testing.T) {
 }
 
 func TestParse_command_with_user_parsing(t *testing.T) {
-	comm, err := ParseCommand("   @nataren,    @yurig please    !@manuel! give me the status of pr   ")
+	comm, err := ParseCommand("   @nataren,    @yurig please    !@manuel! give me the status of pr   ", "4")
 	if err != nil {
 		t.Error("Unexpected error: ", err.Error())
 	}
