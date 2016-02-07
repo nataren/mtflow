@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os/exec"
 	"runtime"
+	"strings"
 	"time"
 )
 
@@ -16,15 +17,17 @@ var _prsURL *url.URL
 var _prsConfig *[]byte
 var _prsAPIKey string
 var _client *http.Client
+var _searcher *Searcher
 
 // InitCommandHandler initializes a PullRequestService command
 // handler, you need to have a URL to the service, a configuration
 // definition, its API key, and a HTTP client so you can talk to it.
-func InitCommandHandler(prsURL *url.URL, prsConfig *[]byte, prsAPIKey string, client *http.Client) {
+func InitCommandHandler(prsURL *url.URL, prsConfig *[]byte, prsAPIKey string, client *http.Client, searcher *Searcher) {
 	_prsURL = prsURL
 	_prsConfig = prsConfig
 	_prsAPIKey = prsAPIKey
 	_client = client
+	_searcher = searcher
 }
 
 // RunCommandHandler It is the top level function that must be called
@@ -164,6 +167,9 @@ func handleCommand(command Command, resultChannel chan string) {
 			return
 		}
 		resultChannel <- fmt.Sprintf("```\n%s\n```", string(cowsaying))
+	case CommandSearch:
+		log.Println("I will handle the 'search' command")
+		resultChannel <- strings.Join(_searcher.Format(_searcher.Find(command.Trailing)), "\n")
 	default:
 		log.Printf("The command '%+v' is not handled\n", command)
 	}

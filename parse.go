@@ -90,6 +90,7 @@ type Command struct {
 	Target   CommandTarget
 	Mentions []string
 	ThreadId string
+	Trailing []string
 }
 
 // ParseCommand takes care of turning a  text string into a proper command
@@ -112,7 +113,8 @@ func ParseCommand(commandStr string, threadId string) (*Command, error) {
 	// parse the command name
 	var commandType = CommandNone
 	var commandTarget = CommandTargetNone
-	for _, part := range filteredParts {
+	trailingIdx := 0
+	for i, part := range filteredParts {
 		part = strings.Trim(part, trimSymbols)
 		switch part {
 		case "start":
@@ -125,6 +127,7 @@ func ParseCommand(commandStr string, threadId string) (*Command, error) {
 			commandType = CommandFortune
 		case "search":
 			commandType = CommandSearch
+			trailingIdx = i + 1
 
 		// command targets
 		case "pr":
@@ -137,5 +140,9 @@ func ParseCommand(commandStr string, threadId string) (*Command, error) {
 			}
 		}
 	}
-	return &Command{Mentions: mentions, Type: commandType, Target: commandTarget, ThreadId: threadId}, nil
+	var trailing []string
+	if trailingIdx > 0 {
+		trailing = filteredParts[trailingIdx:]
+	}
+	return &Command{Mentions: mentions, Type: commandType, Target: commandTarget, ThreadId: threadId, Trailing: trailing}, nil
 }

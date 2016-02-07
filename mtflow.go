@@ -97,10 +97,11 @@ func main() {
 			write(result.Message, result.ThreadId)
 		}
 	}()
+	searcher := &Searcher{}
 
 	// Kick off the command handler
 	commandChannel := make(chan Command)
-	InitCommandHandler(prsParsedURL, &prsConfig, prsAPIKey, httpClient)
+	InitCommandHandler(prsParsedURL, &prsConfig, prsAPIKey, httpClient, searcher)
 	go RunCommandHandler(commandChannel, resultChannel)
 
 	// When we get a new message fire off the handler

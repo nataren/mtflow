@@ -61,3 +61,19 @@ func TestParse_command_with_user_parsing(t *testing.T) {
 		t.Error("Expected type pr but was: ", comm.Target)
 	}
 }
+
+func TestParse_command_with_search(t *testing.T) {
+	comm, err := ParseCommand(" @HAL please search for term1 term2 term3  ", "5")
+	if err != nil {
+		t.Error("Unexpected error: ", err.Error())
+	}
+	if comm.Type != CommandSearch {
+		t.Error("Expected type 'search' but was: ", comm.Type)
+	}
+	if comm.Mentions[0] != "@hal" {
+		t.Error("Expected prefix @HAL but was: ", comm.Mentions[0])
+	}
+	if len(comm.Trailing) != 4 {
+		t.Error("Expected 4 trailing arguments")
+	}
+}
