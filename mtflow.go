@@ -19,11 +19,12 @@ func main() {
 		flowdockAPITokenEnvVar = "FLOWDOCK_API_TOKEN"
 		prsAPIKeyEnvVar        = "PRS_API_KEY"
 
-		orgFlagName           = "organization"
-		flowFlagName          = "flow"
-		userFlagName          = "user"
-		prsURLFlagName        = "prsurl"
-		prsConfigFileFlagName = "prsconfigfile"
+		orgFlagName                    = "organization"
+		flowFlagName                   = "flow"
+		userFlagName                   = "user"
+		prsURLFlagName                 = "prsurl"
+		prsConfigFileFlagName          = "prsconfigfile"
+		searchIndexStoragePathFlagName = "search-index-storage-path"
 	)
 	var (
 
@@ -32,11 +33,12 @@ func main() {
 		prsAPIKey   = os.Getenv(prsAPIKeyEnvVar)
 
 		// Command-line arguments definition
-		org           = flag.String(orgFlagName, "", "The organization name (required)")
-		flow          = flag.String(flowFlagName, "", "The flow to stream from (required)")
-		user          = flag.String(userFlagName, "", "The name of the user which commands are being directed to (required)")
-		prsURL        = flag.String(prsURLFlagName, "", "The URL where we can talk to the PullRequestService (required)")
-		prsConfigFile = flag.String(prsConfigFileFlagName, "", "Path to the configuration file for PullRequestService (required)")
+		org                    = flag.String(orgFlagName, "", "The organization name (required)")
+		flow                   = flag.String(flowFlagName, "", "The flow to stream from (required)")
+		user                   = flag.String(userFlagName, "", "The name of the user which commands are being directed to (required)")
+		prsURL                 = flag.String(prsURLFlagName, "", "The URL where we can talk to the PullRequestService (required)")
+		prsConfigFile          = flag.String(prsConfigFileFlagName, "", "Path to the configuration file for PullRequestService (required)")
+		searchIndexStoragePath = flag.String(searchIndexStoragePathFlagName, "", "The base path to the location where the application will storage its search indexes (required)")
 	)
 	flag.Parse()
 
@@ -48,6 +50,7 @@ func main() {
 	assertNonEmptyFlag(user, userFlagName)
 	assertNonEmptyFlag(prsURL, prsURLFlagName)
 	assertNonEmptyFlag(prsConfigFile, prsConfigFileFlagName)
+	assertNonEmptyFlag(searchIndexStoragePath, searchIndexStoragePathFlagName)
 	prsConfig, err := ioutil.ReadFile(*prsConfigFile)
 	if err != nil {
 		log.Fatal(err)
@@ -97,11 +100,15 @@ func main() {
 			write(result.Message, result.ThreadId)
 		}
 	}()
-	searcher := &Searcher{}
+	search := &SearchEngine{
+		IndexID:         flowID,
+		BaseStoragePath: *searchIndexStoragePath,
+	}
+	search.Init()
 
 	// Kick off the command handler
 	commandChannel := make(chan Command)
-	InitCommandHandler(prsParsedURL, &prsConfig, prsAPIKey, httpClient, searcher)
+	InitCommandHandler(prsParsedURL, &prsConfig, prsAPIKey, httpClient, search)
 	go RunCommandHandler(commandChannel, resultChannel)
 
 	// When we get a new message fire off the handler
@@ -115,6 +122,20 @@ func main() {
 		if tmp != nil {
 			threadId = *tmp
 		}
+		search.Index(SearchIndexingDocument{
+			MessageID:               message.ID,
+			MessageFlowID:           message.FlowID,
+			MessageSent:             message.Sent,
+			MessageUserID:           message.UserID,
+			MessageEvent:            message.Event,
+			MessageRawContent:       message.RawContent,
+			MessageMessageID:        message.MessageID,
+			MessageTags:             message.Tags,
+			MessageUUID:             message.UUID,
+			MessageExternalUserName: message.ExternalUserName,
+			MessageApp:              message.App,
+			MessageThreadId:         message.ThreadId,
+		})
 		executeCommand(commandChannel, resultChannel, *user, *message.RawContent, threadId)
 	}
 }
